@@ -24,12 +24,16 @@ export async function renderTranslatedPage(
         boxHeight: block.height,
       });
 
+      const fontSize = layout.fontSize;
+      const lineHeight = layout.lineHeight;
+      const startY = block.y + Math.max(fontSize, (block.height - layout.lines.length * lineHeight) / 2 + fontSize);
+
       const lines = layout.lines
-        .map((line) => escapeXml(line))
-        .map(
-          (line, index) =>
-            \`<text x="\${block.x + block.width / 2}" y="\${block.y + 16 + index * layout.lineHeight}" text-anchor="middle" font-size="\${layout.fontSize}" font-family="Arial, sans-serif" font-weight="700" fill="black" stroke="white" stroke-width="3" paint-order="stroke">\${line}</text>\`,
-        )
+        .map((line, index) => {
+          const escaped = escapeXml(line);
+          const y = Math.round(startY + index * lineHeight);
+          return \`<text x="\${Math.round(block.x + block.width / 2)}" y="\${y}" text-anchor="middle" font-size="\${fontSize}" font-family="Arial, Noto Sans, sans-serif" font-weight="700" fill="black" stroke="white" stroke-width="\${Math.max(2, Math.round(fontSize / 7))}" paint-order="stroke">\${escaped}</text>\`;
+        })
         .join("");
 
       return {
