@@ -34,6 +34,28 @@ export async function POST(
     await supabase.rpc("recover_stale_manga_pages", {
       p_job_id: id,
       p_timeout_seconds: 900,
+
+    const { data: exhaustedPage } = await supabase
+      .from("manga_pages")
+      .select("id,error")
+      .eq("job_id", id)
+      .eq("status", "failed")
+      .gte("attempts", 3)
+      .limit(1)
+      .maybeSingle();
+
+    if (exhaustedPage) {
+      await supabase.from("translation_jobs").update({
+        status: "failed",
+        error: exhaustedPage.error ?? "Sahifani qayta ishlash 3 urinishdan keyin muvaffaqiyatsiz tugadi.",
+      }).eq("id", id);
+      return NextResponse.json({
+        ok: false,
+        status: "failed",
+        error: exhaustedPage.error ?? "Sahifa uchun maksimal urinishlar soniga yetildi.",
+      }, { status: 422 });
+    }
+
     });
 
     const { data: source, error: sourceError } = await supabase.storage.from(BUCKET).download(job.source_path);
