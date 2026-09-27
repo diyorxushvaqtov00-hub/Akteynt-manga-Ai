@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRealPdfExtractor } from "@/lib/pdf";
 import { getVisionProvider } from "@/lib/ai/provider";
@@ -9,6 +10,11 @@ import { nextAttempt, retryDelayMs } from "@/lib/queue/retry";
 export const runtime = "nodejs";
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "manga-files";
+
+function uuidFromBlockKey(pageId: string, blockKey: string) {
+  const hex = createHash("sha256").update(`${pageId}:${blockKey}`).digest("hex").slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
 
 export async function POST(
   _request: Request,
@@ -98,7 +104,7 @@ export async function POST(
     const vision = await getVisionProvider().detectText(new Uint8Array(await image.arrayBuffer()));
 
     const blocks = vision.blocks.map((b) => ({
-      id: crypto.randomUUID(), page_id: page.id, block_key: b.id, source_text: b.text,
+      id: uuidFromBlockKey(page.id, b.id), page_id: page.id, block_key: b.id, source_text: b.text,
       x: b.x, y: b.y, width: b.width, height: b.height, confidence: b.confidence ?? null, status: "detected",
     }));
     if (blocks.length) {
