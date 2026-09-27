@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
   const jobId = crypto.randomUUID();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const storagePath = \`jobs/\${jobId}/source/\${safeName}\`;
+  const storagePath = "jobs/" + jobId + "/source/" + safeName;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -48,16 +48,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      job: {
-        id: jobId,
-        filename: file.name,
-        size: file.size,
-        status: "uploaded",
-        progress: 0,
-        currentPage: 0,
-        totalPages: null,
-        storagePath,
-      },
+      job: { id: jobId, filename: file.name, size: file.size, status: "uploaded",
+        progress: 0, currentPage: 0, totalPages: null, storagePath },
     });
   } catch (error) {
     return NextResponse.json(
