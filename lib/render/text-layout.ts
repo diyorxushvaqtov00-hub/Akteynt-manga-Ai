@@ -19,7 +19,7 @@ export function layoutText(input: TextLayoutInput): TextLayout {
   let current = "";
 
   for (const word of words) {
-    const candidate = current ? \`\${current} \${word}\` : word;
+    const candidate = current ? `${current} ${word}` : word;
     if (candidate.length > maxChars && current) {
       lines.push(current);
       current = word;
