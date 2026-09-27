@@ -1,11 +1,11 @@
-import { getSupabaseAdmin } from "./supabase";
+import { getSupabaseStorage } from "./supabase-storage";
 import type { FileStorage } from "./storage";
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "manga-files";
 
 export class SupabaseStorage implements FileStorage {
   async put(path: string, data: Uint8Array, contentType: string) {
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseStorage();
     const { error } = await supabase.storage
       .from(BUCKET)
       .upload(path, data, { contentType, upsert: true });
@@ -15,7 +15,7 @@ export class SupabaseStorage implements FileStorage {
   }
 
   async get(path: string) {
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseStorage();
     const { data, error } = await supabase.storage.from(BUCKET).download(path);
 
     if (error || !data) throw error ?? new Error("Fayl topilmadi.");
@@ -23,7 +23,7 @@ export class SupabaseStorage implements FileStorage {
   }
 
   async remove(path: string) {
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseStorage();
     const { error } = await supabase.storage.from(BUCKET).remove([path]);
     if (error) throw error;
   }
