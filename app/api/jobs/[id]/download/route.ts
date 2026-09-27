@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseStorage } from "@/lib/supabase-storage";
 
 export const runtime = "nodejs";
 
@@ -20,7 +21,8 @@ export async function GET(
     return NextResponse.json({ error: "Tarjima qilingan PDF hali tayyor emas." }, { status: 409 });
   }
 
-  const { data, error: signedError } = await supabase.storage
+  const storage = getSupabaseStorage();
+  const { data, error: signedError } = await storage.storage
     .from(BUCKET).createSignedUrl(job.output_path, 60 * 30);
 
   if (signedError || !data?.signedUrl) {
