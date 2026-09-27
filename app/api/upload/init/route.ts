@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       storagePath,
       token: data.token,
       bucket: BUCKET,
+      supabaseUrl: process.env.SUPABASE_URL,
     });
   } catch (error) {
     return NextResponse.json(
