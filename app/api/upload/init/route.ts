@@ -84,6 +84,7 @@ export async function POST(request: Request) {
       method: "POST",
       headers: {
         apikey: secretKey,
+        Authorization: `Bearer ${secretKey}`,
       },
       cache: "no-store",
     });
