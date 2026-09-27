@@ -42,6 +42,7 @@ export function UploadPanel() {
             initData.error ?? "Upload boshlanmadi.",
             diagnostic?.supabaseHost ? `Supabase: ${diagnostic.supabaseHost}` : "",
             diagnostic?.bucket ? `Bucket: ${diagnostic.bucket}` : "",
+            diagnostic?.keyDiagnostics ? `key: present=${diagnostic.keyDiagnostics.present}, segments=${diagnostic.keyDiagnostics.segments}, role=${diagnostic.keyDiagnostics.role ?? "null"}, ref=${diagnostic.keyDiagnostics.ref ?? "null"}, expectedRef=${diagnostic.keyDiagnostics.expectedRef ?? "null"}, refMatch=${diagnostic.keyDiagnostics.refMatchesUrl}, parse=${diagnostic.keyDiagnostics.parseError ?? "ok"}` : "",
             diagnostic ? `token=${diagnostic.hasToken ? "bor" : "yo'q"}, signedUrl=${diagnostic.hasSignedUrl ? "bor" : "yo'q"}` : "",
           ].filter(Boolean).join(" | "),
         );
