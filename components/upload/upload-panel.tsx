@@ -34,7 +34,17 @@ export function UploadPanel() {
       }
 
       if (!initResponse.ok || !initData.jobId || !initData.storagePath || !initData.token || !initData.signedUrl) {
-        throw new Error(initData.error ?? "Upload boshlanmadi.");
+        const stage = (initData as { stage?: string }).stage;
+        const diagnostic = (initData as { diagnostic?: { supabaseHost?: string; protocol?: string; bucket?: string; hasToken?: boolean; hasSignedUrl?: boolean } }).diagnostic;
+        throw new Error(
+          [
+            stage ? `Bosqich: ${stage}` : "Bosqich: upload/init",
+            initData.error ?? "Upload boshlanmadi.",
+            diagnostic?.supabaseHost ? `Supabase: ${diagnostic.supabaseHost}` : "",
+            diagnostic?.bucket ? `Bucket: ${diagnostic.bucket}` : "",
+            diagnostic ? `token=${diagnostic.hasToken ? "bor" : "yo'q"}, signedUrl=${diagnostic.hasSignedUrl ? "bor" : "yo'q"}` : "",
+          ].filter(Boolean).join(" | "),
+        );
       }
 
       // Supabase's official signed-upload flow uses PUT + multipart FormData
@@ -53,7 +63,14 @@ export function UploadPanel() {
 
       if (!uploadResponse.ok) {
         const uploadText = await uploadResponse.text();
-        throw new Error(uploadText || "PDF Supabase Storage'ga yuklanmadi.");
+        let detail = uploadText;
+        try {
+          const parsed = JSON.parse(uploadText);
+          detail = parsed.message ?? parsed.error ?? parsed.statusCode ?? uploadText;
+        } catch {}
+        throw new Error(
+          `Bosqich: supabase-signed-upload | HTTP ${uploadResponse.status} | ${detail || "PDF Supabase Storage'ga yuklanmadi."}`,
+        );
       }
 
       const finalizeResponse = await fetch("/api/upload/finalize", {
