@@ -30,7 +30,7 @@ export async function POST(
     return NextResponse.json({ error: "Bunday sahifa mavjud emas." }, { status: 400 });
   }
 
-  const sourcePath = \`jobs/\${id}/source/\${job.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}\`;
+  const sourcePath = `jobs/${id}/source/${job.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
 
   try {
     const { data: source, error: downloadError } = await supabase.storage
@@ -41,7 +41,7 @@ export async function POST(
     const pdf = new Uint8Array(await source.arrayBuffer());
     const image = await extractor.extractPage(pdf, requestedPage);
 
-    const imagePath = \`jobs/\${id}/pages/\${String(requestedPage).padStart(4, "0")}.png\`;
+    const imagePath = `jobs/${id}/pages/${String(requestedPage).padStart(4, "0")}.png`;
     const { error: uploadError } = await supabase.storage.from(BUCKET).upload(
       imagePath, image, { contentType: "image/png", upsert: true },
     );
