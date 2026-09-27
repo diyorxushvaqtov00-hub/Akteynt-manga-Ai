@@ -79,34 +79,23 @@ export async function POST(request: Request) {
       parseError: keyParseError,
     };
 
-    const signUrl = supabaseUrl + "/storage/v1/object/upload/sign/" + encodeURIComponent(BUCKET) + "/" + storagePath.split("/").map(encodeURIComponent).join("/");
-    const signResponse = await fetch(signUrl, {
-      method: "POST",
-      headers: {
-        apikey: secretKey,
-        Authorization: `Bearer ${secretKey}`,
-      },
-      cache: "no-store",
-    });
+    const supabase = getSupabaseAdmin();
+    const { data: signed, error: signedError } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUploadUrl(storagePath);
 
-    const signText = await signResponse.text();
-    let signData: { token?: string; signedURL?: string; signedUrl?: string; path?: string; message?: string; error?: string } = {};
-    try {
-      signData = JSON.parse(signText);
-    } catch {
-      signData = {};
-    }
-    const token = signData.token;
-    const signedUrl = signData.signedUrl || signData.signedURL;
+    const token = signed?.token;
+    const signedUrl = signed?.signedUrl;
+    const signText = signedError?.message || "";
 
-    if (!signResponse.ok || !token || !signedUrl) {
+    if (signedError || !token || !signedUrl) {
       console.error("[upload/init] signed URL creation failed", {
         stage: "signed-url-create",
         supabaseHost: urlInfo.host,
         protocol: urlInfo.protocol,
         bucket: BUCKET,
         storagePath,
-        httpStatus: signResponse.status,
+        httpStatus: 0,
         hasToken: Boolean(token),
         hasSignedUrl: Boolean(signedUrl),
         response: signText.slice(0, 500),
