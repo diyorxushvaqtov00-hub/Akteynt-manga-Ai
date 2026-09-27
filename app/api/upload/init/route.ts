@@ -2,26 +2,37 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const EDGE_URL = "https://mnbyaetebzfjtpyekcpg.supabase.co/functions/v1/manga-upload";
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
+const BUCKET = "manga-files";
+
+function safeFilename(name: string) {
+  const normalized = name.normalize("NFKC").replace(/[^a-zA-Z0-9._-]/g, "_");
+  return normalized.slice(0, 160) || "chapter.pdf";
+}
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-    if (!key) return NextResponse.json({ stage: "signed-url-create", error: "Server Supabase key sozlanmagan." }, { status: 500 });
+    const filename = typeof body?.filename === "string" ? body.filename : "";
+    const size = Number(body?.size);
+    const type = typeof body?.type === "string" ? body.type : "";
 
-    const response = await fetch(EDGE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: key },
-      body: JSON.stringify({ action: "init", ...body }),
-      cache: "no-store",
-    });
+    if (!filename.toLowerCase().endsWith(".pdf") && type !== "application/pdf") {
+      return NextResponse.json({ stage: "upload/init", error: "Faqat PDF fayl qabul qilinadi." }, { status: 400 });
+    }
 
-    const text = await response.text();
-    let data: unknown;
-    try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 500) }; }
-    return NextResponse.json(data, { status: response.status });
+    if (!Number.isFinite(size) || size <= 0 || size > MAX_FILE_SIZE) {
+      return NextResponse.json({ stage: "upload/init", error: "PDF hajmi 100 MB dan oshmasligi kerak." }, { status: 413 });
+    }
+
+    const jobId = crypto.randomUUID();
+    const storagePath = `jobs/${jobId}/source/${safeFilename(filename)}`;
+
+    return NextResponse.json({ ok: true, jobId, storagePath, bucket: BUCKET });
   } catch (error) {
-    return NextResponse.json({ stage: "signed-url-create", error: error instanceof Error ? error.message : "Upload boshlashda xato." }, { status: 500 });
+    return NextResponse.json({
+      stage: "upload/init",
+      error: error instanceof Error ? error.message : "Upload boshlashda xato.",
+    }, { status: 500 });
   }
 }
