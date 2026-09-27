@@ -4,6 +4,7 @@ import { getRealPdfExtractor } from "@/lib/pdf";
 import { getVisionProvider } from "@/lib/ai/provider";
 import { renderTranslatedPage } from "@/lib/render/page";
 import { assemblePngsToPdf } from "@/lib/pdf/assemble";
+import { nextAttempt, retryDelayMs } from "@/lib/queue/retry";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,11 @@ export async function POST(
     }
 
     const page = pending[0];
+    const now = new Date().toISOString();
+    const next = nextAttempt(page.attempts ?? 0);
+    if (next === null) throw new Error("Sahifa uchun maksimal urinishlar soniga yetildi.");
+    await supabase.from("manga_pages").update({ attempts: next, last_attempt_at: now, locked_at: now }).eq("id", page.id);
+    await new Promise((resolve) => setTimeout(resolve, retryDelayMs(next)));
     await supabase.from("translation_jobs").update({
       status: "extracting", current_page: page.page_number,
       progress: Math.max(1, Math.round(((page.page_number - 1) / totalPages) * 90)),
