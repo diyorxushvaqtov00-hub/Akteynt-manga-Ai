@@ -1,27 +1,80 @@
 import { NextResponse } from "next/server";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
-
-const EDGE_URL = "https://mnbyaetebzfjtpyekcpg.supabase.co/functions/v1/manga-upload";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-    if (!key) return NextResponse.json({ stage: "job-insert", error: "Server Supabase key sozlanmagan." }, { status: 500 });
+    const jobId = typeof body?.jobId === "string" ? body.jobId : "";
+    const filename = typeof body?.filename === "string" ? body.filename : "";
+    const storagePath = typeof body?.storagePath === "string" ? body.storagePath : "";
 
-    const response = await fetch(EDGE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: key },
-      body: JSON.stringify({ action: "finalize", ...body }),
-      cache: "no-store",
+    if (!jobId || !filename || !storagePath || !storagePath.startsWith(`jobs/${jobId}/source/`)) {
+      return NextResponse.json({ stage: "job-insert", error: "Upload ma'lumotlari noto'g'ri." }, { status: 400 });
+    }
+
+    const supabase = getSupabaseAdmin();
+
+    const { data: existing, error: existingError } = await supabase
+      .from("translation_jobs")
+      .select("id,filename,status,progress,current_page,total_pages")
+      .eq("id", jobId)
+      .maybeSingle();
+
+    if (existingError) {
+      return NextResponse.json({ stage: "job-check", error: existingError.message }, { status: 502 });
+    }
+
+    if (existing) {
+      return NextResponse.json({
+        ok: true,
+        job: {
+          id: existing.id,
+          filename: existing.filename,
+          status: existing.status,
+          progress: existing.progress,
+          currentPage: existing.current_page,
+          totalPages: existing.total_pages,
+        },
+      });
+    }
+
+    const { data: job, error } = await supabase
+      .from("translation_jobs")
+      .insert({
+        id: jobId,
+        filename,
+        status: "uploaded",
+        progress: 0,
+        current_page: 0,
+        total_pages: null,
+        source_language: "auto",
+        target_language: "uz",
+        source_path: storagePath,
+      })
+      .select("id,filename,status,progress,current_page,total_pages")
+      .single();
+
+    if (error) {
+      return NextResponse.json({ stage: "job-insert", error: error.message }, { status: 502 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      job: {
+        id: job.id,
+        filename: job.filename,
+        status: job.status,
+        progress: job.progress,
+        currentPage: job.current_page,
+        totalPages: job.total_pages,
+      },
     });
-
-    const text = await response.text();
-    let data: unknown;
-    try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 500) }; }
-    return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    return NextResponse.json({ stage: "job-insert", error: error instanceof Error ? error.message : "Uploadni yakunlashda xato." }, { status: 500 });
+    return NextResponse.json({
+      stage: "job-insert",
+      error: error instanceof Error ? error.message : "Uploadni yakunlashda xato.",
+    }, { status: 500 });
   }
 }
