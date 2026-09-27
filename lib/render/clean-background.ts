@@ -18,7 +18,7 @@ export async function cleanTextRegions(
 
   const overlays = blocks.map((block) => ({
     input: Buffer.from(
-      \`<svg width="\${width}" height="\${height}" xmlns="http://www.w3.org/2000/svg"><rect x="\${Math.max(0, block.x)}" y="\${Math.max(0, block.y)}" width="\${Math.max(1, block.width)}" height="\${Math.max(1, block.height)}" rx="\${Math.min(block.width, block.height) / 2}" fill="white" fill-opacity=".96"/></svg>\`,
+      `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect x="${Math.max(0, block.x)}" y="${Math.max(0, block.y)}" width="${Math.max(1, block.width)}" height="${Math.max(1, block.height)}" rx="${Math.min(block.width, block.height) / 2}" fill="white" fill-opacity=".96"/></svg>`,
     ),
   }));
 
