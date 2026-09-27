@@ -32,13 +32,57 @@ export async function POST(request: Request) {
     const storagePath = `jobs/${jobId}/source/${safeFilename(filename)}`;
     const supabase = getSupabaseAdmin();
 
+    // Diagnostic metadata only: never expose the service-role key or signed token.
+    const supabaseUrl = process.env.SUPABASE_URL || "";
+    const urlInfo = (() => {
+      try {
+        const parsed = new URL(supabaseUrl);
+        return { host: parsed.host, protocol: parsed.protocol };
+      } catch {
+        return { host: "INVALID_URL", protocol: "INVALID" };
+      }
+    })();
+
     const { data, error } = await supabase.storage
       .from(BUCKET)
       .createSignedUploadUrl(storagePath);
 
     if (error || !data?.token) {
-      throw error ?? new Error("Supabase signed upload URL yaratmadi.");
+      console.error("[upload/init] signed URL creation failed", {
+        stage: "signed-url-create",
+        supabaseHost: urlInfo.host,
+        protocol: urlInfo.protocol,
+        bucket: BUCKET,
+        storagePath,
+        hasData: Boolean(data),
+        hasToken: Boolean(data?.token),
+        hasSignedUrl: Boolean(data?.signedUrl),
+        error: error?.message ?? null,
+        errorName: error?.name ?? null,
+      });
+
+      return NextResponse.json({
+        ok: false,
+        stage: "signed-url-create",
+        diagnostic: {
+          supabaseHost: urlInfo.host,
+          protocol: urlInfo.protocol,
+          bucket: BUCKET,
+          hasToken: Boolean(data?.token),
+          hasSignedUrl: Boolean(data?.signedUrl),
+        },
+        error: error?.message ?? "Supabase signed upload URL yaratmadi.",
+      }, { status: 502 });
     }
+
+    console.info("[upload/init] signed URL created", {
+      stage: "signed-url-create",
+      supabaseHost: urlInfo.host,
+      protocol: urlInfo.protocol,
+      bucket: BUCKET,
+      hasToken: true,
+      hasSignedUrl: Boolean(data.signedUrl),
+    });
 
     return NextResponse.json({
       ok: true,
