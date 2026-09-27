@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Loader2, AlertCircle, Download } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Loader2, AlertCircle, Download, BookOpen } from "lucide-react";
 
 type Job = {
   id: string; filename: string; status: string; progress: number;
@@ -82,9 +83,14 @@ export default function TranslatePage({ params }: { params: Promise<{ id: string
         </div>
 
         {job.status === "completed" && (
-          <button onClick={download} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-600 px-5 py-3 font-semibold hover:bg-purple-500">
-            <Download size={18} /> Tarjima qilingan PDF'ni olish
-          </button>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <Link href={"/reader/" + id} className="flex items-center justify-center gap-2 rounded-2xl bg-purple-600 px-5 py-3 font-semibold hover:bg-purple-500">
+              <BookOpen size={18} /> Readerda o‘qish
+            </Link>
+            <button onClick={download} className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 px-5 py-3 font-semibold hover:bg-white/10">
+              <Download size={18} /> PDF'ni olish
+            </button>
+          </div>
         )}
       </div>
     </main>
