@@ -26,7 +26,30 @@ export function UploadPanel() {
       });
 
       const initText = await initResponse.text();
-      let initData: { error?: string; jobId?: string; storagePath?: string; token?: string; signedUrl?: string } = {};
+      let initData: {
+        error?: string;
+        stage?: string;
+        jobId?: string;
+        storagePath?: string;
+        token?: string;
+        signedUrl?: string;
+        diagnostic?: {
+          supabaseHost?: string;
+          protocol?: string;
+          bucket?: string;
+          hasToken?: boolean;
+          hasSignedUrl?: boolean;
+          keyDiagnostics?: {
+            present?: boolean;
+            segments?: number;
+            role?: string | null;
+            ref?: string | null;
+            expectedRef?: string | null;
+            refMatchesUrl?: boolean;
+            parseError?: string | null;
+          };
+        };
+      } = {};
       try {
         initData = JSON.parse(initText);
       } catch {
