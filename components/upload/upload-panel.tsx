@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { Upload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 export function UploadPanel() {
   const [file, setFile] = useState<File | null>(null);
@@ -13,16 +17,66 @@ export function UploadPanel() {
     setLoading(true);
     setMessage("");
 
-    const body = new FormData();
-    body.append("file", file);
-
     try {
-      const response = await fetch("/api/upload", { method: "POST", body });
-      const data = await response.json();
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error("NEXT_PUBLIC_SUPABASE_URL yoki NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY sozlanmagan.");
+      }
 
-      if (!response.ok) throw new Error(data.error ?? "Upload xatosi.");
+      const supabase = createClient(supabaseUrl, supabaseKey);
 
-      window.location.href = "/translate/" + data.job.id;
+      const initResponse = await fetch("/api/upload/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          size: file.size,
+          type: file.type,
+        }),
+      });
+
+      const initText = await initResponse.text();
+      let initData: { error?: string; jobId?: string; storagePath?: string; token?: string } = {};
+      try {
+        initData = JSON.parse(initText);
+      } catch {
+        throw new Error(initText.slice(0, 240) || "Upload serveridan noto'g'ri javob keldi.");
+      }
+
+      if (!initResponse.ok || !initData.jobId || !initData.storagePath || !initData.token) {
+        throw new Error(initData.error ?? "Upload boshlanmadi.");
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from("manga-files")
+        .uploadToSignedUrl(initData.storagePath, initData.token, file, {
+          contentType: "application/pdf",
+        });
+
+      if (uploadError) throw uploadError;
+
+      const finalizeResponse = await fetch("/api/upload/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId: initData.jobId,
+          filename: file.name,
+          storagePath: initData.storagePath,
+        }),
+      });
+
+      const finalizeText = await finalizeResponse.text();
+      let finalizeData: { error?: string; job?: { id: string } } = {};
+      try {
+        finalizeData = JSON.parse(finalizeText);
+      } catch {
+        throw new Error(finalizeText.slice(0, 240) || "Upload yakunlash serveridan noto'g'ri javob keldi.");
+      }
+
+      if (!finalizeResponse.ok || !finalizeData.job) {
+        throw new Error(finalizeData.error ?? "Upload yakunlanmadi.");
+      }
+
+      window.location.href = "/translate/" + finalizeData.job.id;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Noma'lum xato.");
     } finally {
