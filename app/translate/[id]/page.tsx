@@ -6,7 +6,7 @@ import { CheckCircle2, Loader2, AlertCircle, Download, BookOpen } from "lucide-r
 
 type Job = {
   id: string; filename: string; status: string; progress: number;
-  currentPage: number; totalPages: number | null; error: string | null;
+  currentPage: number; totalPages: number | null; error: string | null; updatedAt: string;
 };
 
 export default function TranslatePage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,7 +43,7 @@ export default function TranslatePage({ params }: { params: Promise<{ id: string
   useEffect(() => {
     if (!job || busy || job.status === "completed" || job.status === "failed") return;
     processNext();
-  }, [job?.currentPage, job?.status]);
+  }, [job?.currentPage, job?.status, job?.updatedAt]);
 
   async function download() {
     const response = await fetch("/api/jobs/" + id + "/download");
