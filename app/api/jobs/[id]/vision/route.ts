@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getVisionProvider, assertVisionResult } from "@/lib/ai/provider";
 
 export const runtime = "nodejs";
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "manga-files";
+
+function uuidFromBlockKey(pageId: string, blockKey: string) {
+  const hex = createHash("sha256").update(`${pageId}:${blockKey}`).digest("hex").slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
 
 export async function POST(
   request: Request,
@@ -41,7 +47,7 @@ export async function POST(
     assertVisionResult(result);
 
     const blocks = result.blocks.map((block) => ({
-      id: crypto.randomUUID(),
+      id: uuidFromBlockKey(page.id, block.id),
       page_id: page.id,
       block_key: block.id,
       source_text: block.text,
