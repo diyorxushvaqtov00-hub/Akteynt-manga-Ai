@@ -18,7 +18,7 @@ begin
       error = 'Worker timeout; page queued for retry.',
       locked_at = null
   where job_id = p_job_id
-    and status = 'processing'
+    and status in ('processing', 'analyzing', 'translating', 'rendering')
     and locked_at is not null
     and locked_at < now() - make_interval(secs => p_timeout_seconds)
     and attempts < 3;
