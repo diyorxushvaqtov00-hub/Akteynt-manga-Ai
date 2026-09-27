@@ -10,7 +10,7 @@ export interface TextLayout {
   lineHeight: number;
 }
 
-export function layoutUzbekText(input: TextLayoutInput): TextLayout {
+export function layoutText(input: TextLayoutInput): TextLayout {
   const words = input.text.trim().split(/\\s+/).filter(Boolean);
   if (!words.length) return { fontSize: 18, lines: [], lineHeight: 22 };
 
