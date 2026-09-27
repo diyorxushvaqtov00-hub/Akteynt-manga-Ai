@@ -47,7 +47,7 @@ export async function POST(
       })),
     );
 
-    const outputPath = \`jobs/\${id}/pages/\${String(pageNumber).padStart(4, "0")}-uz.png\`;
+    const outputPath = `jobs/${id}/pages/${String(pageNumber).padStart(4, "0")}-uz.png`;
     const { error: uploadError } = await supabase.storage.from(BUCKET).upload(
       outputPath, rendered, { contentType: "image/png", upsert: true },
     );
