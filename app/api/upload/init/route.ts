@@ -79,40 +79,47 @@ export async function POST(request: Request) {
       parseError: keyParseError,
     };
 
-    const supabase = getSupabaseAdmin();
-    const { data: signed, error: signedError } = await supabase.storage
-      .from(BUCKET)
-      .createSignedUploadUrl(storagePath);
-
-    const token = signed?.token;
-    const signedUrl = signed?.signedUrl;
-    const signText = signedError?.message || "";
-
-    if (signedError || !token || !signedUrl) {
-      console.error("[upload/init] signed URL creation failed", {
-        stage: "signed-url-create",
-        supabaseHost: urlInfo.host,
-        protocol: urlInfo.protocol,
-        bucket: BUCKET,
-        storagePath,
-        httpStatus: 0,
-        hasToken: Boolean(token),
-        hasSignedUrl: Boolean(signedUrl),
-        response: signText.slice(0, 500),
-      });
-
+    // Supabase Storage's signed-upload endpoint currently expects a JWT-style
+    // Authorization header. New sb_secret_* keys are not JWTs, so do not send
+    // them through supabase-js for this operation. Use the publishable key as
+    // the client identity and let the secret key authorize the REST call.
+    const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || "";
+    if (!publishableKey) {
       return NextResponse.json({
         ok: false,
         stage: "signed-url-create",
-        diagnostic: {
-          supabaseHost: urlInfo.host,
-          protocol: urlInfo.protocol,
-          bucket: BUCKET,
-          hasToken: Boolean(token),
-          hasSignedUrl: Boolean(signedUrl),
-          keyDiagnostics,
-        },
-        error: signText.slice(0, 500) || "Supabase signed upload URL yaratmadi.",
+        error: "SUPABASE_PUBLISHABLE_KEY sozlanmagan. Supabase publishable key kerak.",
+        diagnostic: { supabaseHost: urlInfo.host, protocol: urlInfo.protocol, bucket: BUCKET, hasToken: false, hasSignedUrl: false, keyDiagnostics },
+      }, { status: 500 });
+    }
+
+    const signUrl = supabaseUrl + "/storage/v1/object/upload/sign/" + encodeURIComponent(BUCKET) + "/" + storagePath.split("/").map(encodeURIComponent).join("/");
+    const signResponse = await fetch(signUrl, {
+      method: "POST",
+      headers: {
+        apikey: publishableKey,
+        Authorization: `Bearer ${publishableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+      cache: "no-store",
+    });
+    const signText = await signResponse.text();
+    let signData: { token?: string; signedUrl?: string; signedURL?: string; message?: string; error?: string } = {};
+    try { signData = JSON.parse(signText); } catch { /* keep raw response for diagnostics */ }
+    const token = signData.token;
+    const signedUrl = signData.signedUrl || signData.signedURL;
+
+    if (!signResponse.ok || !token || !signedUrl) {
+      console.error("[upload/init] signed URL creation failed", {
+        stage: "signed-url-create", httpStatus: signResponse.status,
+        supabaseHost: urlInfo.host, bucket: BUCKET, hasToken: Boolean(token), hasSignedUrl: Boolean(signedUrl),
+        response: signText.slice(0, 500),
+      });
+      return NextResponse.json({
+        ok: false, stage: "signed-url-create",
+        diagnostic: { supabaseHost: urlInfo.host, protocol: urlInfo.protocol, bucket: BUCKET, hasToken: Boolean(token), hasSignedUrl: Boolean(signedUrl), keyDiagnostics, httpStatus: signResponse.status, response: signText.slice(0, 500) },
+        error: signData.message || signData.error || signText.slice(0, 500) || "Supabase signed upload URL yaratmadi.",
       }, { status: 502 });
     }
 
