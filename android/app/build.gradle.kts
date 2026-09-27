@@ -3,8 +3,18 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
-android { namespace="uz.akteynt.mangaai"; compileSdk=35
-    defaultConfig { applicationId="uz.akteynt.mangaai"; minSdk=26; targetSdk=35; versionCode=1; versionName="1.0.0" }
+android {
+    namespace="uz.akteynt.mangaai"
+    compileSdk=35
+    defaultConfig {
+        applicationId="uz.akteynt.mangaai"
+        minSdk=26
+        targetSdk=35
+        versionCode=1
+        versionName="1.0.0"
+        buildConfigField("String","SUPABASE_PUBLISHABLE_KEY","\""+(System.getenv("SUPABASE_PUBLISHABLE_KEY") ?: "")+"\"")
+    }
+    buildFeatures { buildConfig=true }
 }
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
