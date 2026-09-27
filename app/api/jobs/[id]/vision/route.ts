@@ -21,7 +21,7 @@ export async function POST(
   const supabase = getSupabaseAdmin();
   const { data: page, error } = await supabase
     .from("manga_pages")
-    .select("id,original_image_path,status")
+    .select("id,original_image_path")
     .eq("job_id", id)
     .eq("page_number", pageNumber)
     .single();
@@ -35,24 +35,41 @@ export async function POST(
       .from(BUCKET).download(page.original_image_path);
     if (downloadError || !image) throw downloadError ?? new Error("Sahifa rasmi yuklanmadi.");
 
-    const provider = getVisionProvider();
-    const result = await provider.detectText(new Uint8Array(await image.arrayBuffer()));
+    const result = await getVisionProvider().detectText(
+      new Uint8Array(await image.arrayBuffer()),
+    );
     assertVisionResult(result);
 
-    await supabase.from("manga_pages").update({ status: "analyzing", error: null })
-      .eq("id", page.id);
+    const blocks = result.blocks.map((block) => ({
+      id: crypto.randomUUID(),
+      page_id: page.id,
+      block_key: block.id,
+      source_text: block.text,
+      x: block.x,
+      y: block.y,
+      width: block.width,
+      height: block.height,
+      confidence: block.confidence ?? null,
+      status: "detected",
+    }));
+
+    const { error: blockError } = await supabase
+      .from("text_blocks")
+      .upsert(blocks, { onConflict: "page_id,block_key" });
+    if (blockError) throw blockError;
+
+    const { error: pageError } = await supabase.from("manga_pages")
+      .update({ status: "analyzing", error: null }).eq("id", page.id);
+    if (pageError) throw pageError;
 
     return NextResponse.json({
-      ok: true,
-      jobId: id,
-      pageNumber,
-      status: "analyzing",
-      result,
+      ok: true, jobId: id, pageNumber, status: "analyzing",
+      pageWidth: result.pageWidth, pageHeight: result.pageHeight,
+      blocks: result.blocks.length,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Vision xatosi.";
-    await supabase.from("manga_pages").update({ status: "failed", error: message })
-      .eq("id", page.id);
+    await supabase.from("manga_pages").update({ status: "failed", error: message }).eq("id", page.id);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
