@@ -34,6 +34,7 @@ export async function POST(request: Request) {
 
     // Diagnostic metadata only: never expose the service-role key or signed token.
     const supabaseUrl = process.env.SUPABASE_URL || "";
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
     const urlInfo = (() => {
       try {
         const parsed = new URL(supabaseUrl);
@@ -42,6 +43,40 @@ export async function POST(request: Request) {
         return { host: "INVALID_URL", protocol: "INVALID" };
       }
     })();
+
+    // Safe JWT diagnostics: expose only structure/claims, never the key itself.
+    const keyParts = serviceRoleKey.split(".");
+    let keyRole: string | null = null;
+    let keyRef: string | null = null;
+    let keyParseError: string | null = null;
+    if (keyParts.length === 3) {
+      try {
+        const payload = JSON.parse(Buffer.from(keyParts[1], "base64url").toString("utf8")) as {
+          role?: unknown;
+          ref?: unknown;
+        };
+        keyRole = typeof payload.role === "string" ? payload.role : null;
+        keyRef = typeof payload.ref === "string" ? payload.ref : null;
+      } catch {
+        keyParseError = "JWT payload decode failed";
+      }
+    } else {
+      keyParseError = "JWT must contain 3 segments";
+    }
+    const expectedRef = urlInfo.host.endsWith(".supabase.co")
+      ? urlInfo.host.split(".")[0]
+      : null;
+    const keyDiagnostics = {
+      present: Boolean(serviceRoleKey),
+      length: serviceRoleKey.length,
+      segments: keyParts.length,
+      looksLikeJwt: keyParts.length === 3,
+      role: keyRole,
+      ref: keyRef,
+      expectedRef,
+      refMatchesUrl: Boolean(keyRef && expectedRef && keyRef === expectedRef),
+      parseError: keyParseError,
+    };
 
     const { data, error } = await supabase.storage
       .from(BUCKET)
@@ -70,6 +105,7 @@ export async function POST(request: Request) {
           bucket: BUCKET,
           hasToken: Boolean(data?.token),
           hasSignedUrl: Boolean(data?.signedUrl),
+          keyDiagnostics,
         },
         error: error?.message ?? "Supabase signed upload URL yaratmadi.",
       }, { status: 502 });
