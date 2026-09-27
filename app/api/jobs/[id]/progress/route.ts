@@ -1,24 +1,32 @@
 import { NextResponse } from "next/server";
+import { getSupabaseAdmin } from "@/lib/supabase";
+
+export const runtime = "nodejs";
 
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const body = await request.json().catch(() => ({}));
-  const totalPages = Number(body.totalPages ?? 0);
-  const currentPage = Number(body.currentPage ?? 0);
+  const supabase = getSupabaseAdmin();
 
-  const progress =
-    totalPages > 0
-      ? Math.min(100, Math.max(0, Math.round((currentPage / totalPages) * 100)))
-      : 0;
+  const { data: job, error } = await supabase
+    .from("translation_jobs")
+    .select("id,status,progress,current_page,total_pages,error,updated_at")
+    .eq("id", id)
+    .single();
+
+  if (error || !job) {
+    return NextResponse.json({ error: "Job topilmadi." }, { status: 404 });
+  }
 
   return NextResponse.json({
-    jobId: id,
-    currentPage,
-    totalPages,
-    progress,
-    status: progress >= 100 ? "completed" : "processing",
+    jobId: job.id,
+    status: job.status,
+    progress: job.progress,
+    currentPage: job.current_page,
+    totalPages: job.total_pages,
+    error: job.error,
+    updatedAt: job.updated_at,
   });
 }
