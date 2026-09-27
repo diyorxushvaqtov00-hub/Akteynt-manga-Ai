@@ -79,12 +79,11 @@ export async function POST(request: Request) {
       parseError: keyParseError,
     };
 
-    const signUrl = supabaseUrl + "/storage/v1/object/upload/sign/" + encodeURI(storagePath);
+    const signUrl = supabaseUrl + "/storage/v1/object/upload/sign/" + encodeURIComponent(BUCKET) + "/" + storagePath.split("/").map(encodeURIComponent).join("/");
     const signResponse = await fetch(signUrl, {
       method: "POST",
       headers: {
         apikey: secretKey,
-        "Content-Type": "application/json",
       },
       cache: "no-store",
     });
