@@ -30,11 +30,12 @@ export async function POST(request: Request) {
 
     const jobId = crypto.randomUUID();
     const storagePath = `jobs/${jobId}/source/${safeFilename(filename)}`;
-    const supabase = getSupabaseAdmin();
-
-    // Diagnostic metadata only: never expose the service-role key or signed token.
+    // New sb_secret_* keys are not JWTs. Use the apikey header directly for Storage.
     const supabaseUrl = process.env.SUPABASE_URL || "";
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+    // Diagnostic metadata only: never expose the secret key or signed token.
+    const serviceRoleKey = secretKey;
     const urlInfo = (() => {
       try {
         const parsed = new URL(supabaseUrl);
@@ -78,22 +79,37 @@ export async function POST(request: Request) {
       parseError: keyParseError,
     };
 
-    const { data, error } = await supabase.storage
-      .from(BUCKET)
-      .createSignedUploadUrl(storagePath);
+    const signUrl = supabaseUrl + "/storage/v1/object/upload/sign/" + encodeURI(storagePath);
+    const signResponse = await fetch(signUrl, {
+      method: "POST",
+      headers: {
+        apikey: secretKey,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
 
-    if (error || !data?.token) {
+    const signText = await signResponse.text();
+    let signData: { token?: string; signedURL?: string; signedUrl?: string; path?: string; message?: string; error?: string } = {};
+    try {
+      signData = JSON.parse(signText);
+    } catch {
+      signData = {};
+    }
+    const token = signData.token;
+    const signedUrl = signData.signedUrl || signData.signedURL;
+
+    if (!signResponse.ok || !token || !signedUrl) {
       console.error("[upload/init] signed URL creation failed", {
         stage: "signed-url-create",
         supabaseHost: urlInfo.host,
         protocol: urlInfo.protocol,
         bucket: BUCKET,
         storagePath,
-        hasData: Boolean(data),
-        hasToken: Boolean(data?.token),
-        hasSignedUrl: Boolean(data?.signedUrl),
-        error: error?.message ?? null,
-        errorName: error?.name ?? null,
+        httpStatus: signResponse.status,
+        hasToken: Boolean(token),
+        hasSignedUrl: Boolean(signedUrl),
+        response: signText.slice(0, 500),
       });
 
       return NextResponse.json({
@@ -103,11 +119,11 @@ export async function POST(request: Request) {
           supabaseHost: urlInfo.host,
           protocol: urlInfo.protocol,
           bucket: BUCKET,
-          hasToken: Boolean(data?.token),
-          hasSignedUrl: Boolean(data?.signedUrl),
+          hasToken: Boolean(token),
+          hasSignedUrl: Boolean(signedUrl),
           keyDiagnostics,
         },
-        error: error?.message ?? "Supabase signed upload URL yaratmadi.",
+        error: signData.message || signData.error || signText.slice(0, 500) || "Supabase signed upload URL yaratmadi.",
       }, { status: 502 });
     }
 
@@ -117,15 +133,15 @@ export async function POST(request: Request) {
       protocol: urlInfo.protocol,
       bucket: BUCKET,
       hasToken: true,
-      hasSignedUrl: Boolean(data.signedUrl),
+      hasSignedUrl: true,
     });
 
     return NextResponse.json({
       ok: true,
       jobId,
       storagePath,
-      token: data.token,
-      signedUrl: data.signedUrl,
+      token,
+      signedUrl,
       bucket: BUCKET,
     });
   } catch (error) {
