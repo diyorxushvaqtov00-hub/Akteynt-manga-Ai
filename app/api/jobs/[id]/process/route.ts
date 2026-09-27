@@ -45,7 +45,7 @@ export async function POST(
     }
 
     const { data: pending, error: pendingError } = await supabase
-      .from("manga_pages").select("id,page_number,status,original_image_path")
+      .from("manga_pages").select("id,page_number,status,original_image_path,attempts")
       .eq("job_id", id).neq("status", "translated")
       .order("page_number", { ascending: true }).limit(1);
     if (pendingError) throw pendingError;
@@ -59,7 +59,7 @@ export async function POST(
     const next = nextAttempt(page.attempts ?? 0);
     if (next === null) throw new Error("Sahifa uchun maksimal urinishlar soniga yetildi.");
     await supabase.from("manga_pages").update({ attempts: next, last_attempt_at: now, locked_at: now }).eq("id", page.id);
-    await new Promise((resolve) => setTimeout(resolve, retryDelayMs(next)));
+    if ((page.attempts ?? 0) > 0) await new Promise((resolve) => setTimeout(resolve, retryDelayMs(next)));
     await supabase.from("translation_jobs").update({
       status: "extracting", current_page: page.page_number,
       progress: Math.max(1, Math.round(((page.page_number - 1) / totalPages) * 90)),
