@@ -40,10 +40,10 @@ export class GatewayVisionProvider implements VisionProvider {
 
   async translate(text: string, context?: string): Promise<string> {
     const { text: result } = await generateText({
-        model: process.env.AI_TRANSLATION_MODEL || MODEL,
-        system: "Translate manga/manhwa dialogue naturally into Uzbek. Preserve names, tone, emotion and meaning. Return only the translation.",
-        prompt: context ? `Context: ${context}\n\nText: ${text}` : text,
-      });
+      model: process.env.AI_TRANSLATION_MODEL || MODEL,
+      system: "Translate manga/manhwa dialogue naturally into Uzbek. Preserve names, tone, emotion and meaning. Return only the translation.",
+      prompt: context ? `Context: ${context}\n\nText: ${text}` : text,
+    });
 
     return result.trim();
   }
