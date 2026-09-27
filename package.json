@@ -15,7 +15,7 @@
     "lucide-react": "latest",
     "pdfjs-dist": "latest",
     "sharp": "latest",
-    "@supabase/supabase-js": "latest",
+    "@supabase/supabase-js": "2.117.1",
     "@napi-rs/canvas": "latest",
     "ai": "latest",
     "zod": "latest",
