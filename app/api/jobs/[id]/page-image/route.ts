@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseStorage } from "@/lib/supabase-storage";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,8 @@ export async function GET(
     return NextResponse.json({ error: "Sahifa rasmi hali tayyor emas." }, { status: 404 });
   }
 
-  const { data: signed, error: signedError } = await supabase.storage
+  const storage = getSupabaseStorage();
+  const { data: signed, error: signedError } = await storage.storage
     .from(BUCKET)
     .createSignedUrl(imagePath, 60 * 10);
 
