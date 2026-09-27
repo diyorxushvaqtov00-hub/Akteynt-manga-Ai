@@ -1,6 +1,7 @@
 export type TranslationJobStatus =
   | "uploaded"
   | "extracting"
+  | "processing"
   | "analyzing"
   | "translating"
   | "rendering"
