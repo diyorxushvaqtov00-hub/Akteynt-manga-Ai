@@ -1,4 +1,5 @@
 import type { TextBlock, VisionPageResult } from "./types";
+import { GatewayVisionProvider } from "./provider-gateway";
 
 export interface VisionProvider {
   detectText(image: Uint8Array): Promise<VisionPageResult>;
@@ -6,9 +7,10 @@ export interface VisionProvider {
 }
 
 export function getVisionProvider(): VisionProvider {
-  throw new Error(
-    "AI provider hali sozlanmagan. AI Gateway/provider environment o'zgaruvchilarini ulang.",
-  );
+  if (!process.env.AI_GATEWAY_API_KEY) {
+    throw new Error("AI_GATEWAY_API_KEY sozlanmagan.");
+  }
+  return new GatewayVisionProvider();
 }
 
 export function assertVisionResult(result: VisionPageResult) {
@@ -21,7 +23,9 @@ export function assertVisionResult(result: VisionPageResult) {
   }
 
   for (const block of result.blocks as TextBlock[]) {
-    if (!block.id || typeof block.text !== "string") throw new Error("Vision text block noto'g'ri.");
+    if (!block.id || typeof block.text !== "string") {
+      throw new Error("Vision text block noto'g'ri.");
+    }
     if (![block.x, block.y, block.width, block.height].every(Number.isFinite)) {
       throw new Error("Vision koordinatalari noto'g'ri.");
     }
