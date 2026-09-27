@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Upload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 
 export function UploadPanel() {
@@ -56,42 +57,28 @@ export function UploadPanel() {
         throw new Error(initText.slice(0, 240) || "Upload serveridan noto'g'ri javob keldi.");
       }
 
-      if (!initResponse.ok || !initData.jobId || !initData.storagePath || !initData.token || !initData.signedUrl) {
-        const stage = initData.stage;
-        const diagnostic = initData.diagnostic;
+      if (!initResponse.ok || !initData.jobId || !initData.storagePath) {
         throw new Error(
           [
-            stage ? `Bosqich: ${stage}` : "Bosqich: upload/init",
+            initData.stage ? `Bosqich: ${initData.stage}` : "Bosqich: upload/init",
             `HTTP ${initResponse.status}`,
-            initData.error ?? (initText && initText !== "{}" ? initText.slice(0, 500) : "Upload boshlanmadi."),
-            diagnostic?.supabaseHost ? `Supabase: ${diagnostic.supabaseHost}` : "",
-            diagnostic?.bucket ? `Bucket: ${diagnostic.bucket}` : "",
-            diagnostic?.keyDiagnostics ? `key: present=${diagnostic.keyDiagnostics.present}, segments=${diagnostic.keyDiagnostics.segments}, role=${diagnostic.keyDiagnostics.role ?? "null"}, ref=${diagnostic.keyDiagnostics.ref ?? "null"}, expectedRef=${diagnostic.keyDiagnostics.expectedRef ?? "null"}, refMatch=${diagnostic.keyDiagnostics.refMatchesUrl}, parse=${diagnostic.keyDiagnostics.parseError ?? "ok"}` : "",
-            diagnostic ? `token=${diagnostic.hasToken ? "bor" : "yo'q"}, signedUrl=${diagnostic.hasSignedUrl ? "bor" : "yo'q"}` : "",
-          ].filter(Boolean).join(" | "),
+            initData.error ?? "Upload boshlanmadi.",
+          ].join(" | "),
         );
       }
 
-      // A signed upload URL accepts the file bytes directly. Do not wrap the
-      // PDF in FormData; that would upload multipart boundaries as file data.
-      const uploadResponse = await fetch(initData.signedUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type || "application/pdf",
-          "x-upsert": "false",
-        },
-        body: file,
-      });
+      setMessage("PDF Supabase Storage'ga yuklanmoqda...");
 
-      if (!uploadResponse.ok) {
-        const uploadText = await uploadResponse.text();
-        let detail = uploadText;
-        try {
-          const parsed = JSON.parse(uploadText);
-          detail = parsed.message ?? parsed.error ?? parsed.statusCode ?? uploadText;
-        } catch {}
+      const { error: storageError } = await supabaseBrowser.storage
+        .from("manga-files")
+        .upload(initData.storagePath, file, {
+          contentType: file.type || "application/pdf",
+          upsert: false,
+        });
+
+      if (storageError) {
         throw new Error(
-          `Bosqich: supabase-signed-upload | HTTP ${uploadResponse.status} | ${detail || "PDF Supabase Storage'ga yuklanmadi."}`,
+          `Bosqich: supabase-upload | ${storageError.message || "PDF Storage'ga yuklanmadi."}`,
         );
       }
 
