@@ -34,6 +34,7 @@ export async function POST(
     await supabase.rpc("recover_stale_manga_pages", {
       p_job_id: id,
       p_timeout_seconds: 900,
+    });
 
     const { data: exhaustedPage } = await supabase
       .from("manga_pages")
