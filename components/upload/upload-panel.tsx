@@ -26,20 +26,20 @@ export function UploadPanel() {
       });
 
       const initText = await initResponse.text();
-      let initData: { error?: string; jobId?: string; storagePath?: string; token?: string } = {};
+      let initData: { error?: string; jobId?: string; storagePath?: string; token?: string; supabaseUrl?: string } = {};
       try {
         initData = JSON.parse(initText);
       } catch {
         throw new Error(initText.slice(0, 240) || "Upload serveridan noto'g'ri javob keldi.");
       }
 
-      if (!initResponse.ok || !initData.jobId || !initData.storagePath || !initData.token) {
+      if (!initResponse.ok || !initData.jobId || !initData.storagePath || !initData.token || !initData.supabaseUrl) {
         throw new Error(initData.error ?? "Upload boshlanmadi.");
       }
 
       const uploadUrl = new URL(
         `/storage/v1/object/upload/sign/${initData.storagePath}`,
-        window.location.origin,
+        initData.supabaseUrl,
       );
       uploadUrl.searchParams.set("token", initData.token);
 
