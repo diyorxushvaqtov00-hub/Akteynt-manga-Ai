@@ -43,7 +43,7 @@ export class GatewayVisionProvider implements VisionProvider {
       generateText({
         model: process.env.AI_TRANSLATION_MODEL || MODEL,
         system: "Translate manga/manhwa dialogue naturally into Uzbek. Preserve names, tone, emotion and meaning. Return only the translation.",
-        prompt: context ? \`Context: \${context}\\n\\nText: \${text}\` : text,
+        prompt: context ? `Context: ${context}\n\nText: ${text}` : text,
       }),
     );
 
