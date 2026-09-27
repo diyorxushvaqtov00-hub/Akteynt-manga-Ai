@@ -6,22 +6,37 @@ export const runtime = "nodejs";
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "manga-files";
 
+function safeFilename(name: string) {
+  const normalized = name.normalize("NFKC").replace(/[^a-zA-Z0-9._-]/g, "_");
+  return normalized.slice(0, 160) || "chapter.pdf";
+}
+
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  const file = formData.get("file");
-
-  if (!(file instanceof File)) return NextResponse.json({ error: "PDF fayl topilmadi." }, { status: 400 });
-  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) return NextResponse.json({ error: "Faqat PDF fayl qabul qilinadi." }, { status: 400 });
-  if (file.size === 0) return NextResponse.json({ error: "Fayl bo'sh." }, { status: 400 });
-  if (file.size > MAX_FILE_SIZE) return NextResponse.json({ error: "PDF hajmi 100 MB dan oshmasligi kerak." }, { status: 413 });
-
-  const jobId = crypto.randomUUID();
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const storagePath = "jobs/" + jobId + "/source/" + safeName;
-
   try {
+    const formData = await request.formData();
+    const file = formData.get("file");
+
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "PDF fayl topilmadi." }, { status: 400 });
+    }
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      return NextResponse.json({ error: "Faqat PDF fayl qabul qilinadi." }, { status: 400 });
+    }
+    if (file.size === 0) return NextResponse.json({ error: "Fayl bo'sh." }, { status: 400 });
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "PDF hajmi 100 MB dan oshmasligi kerak." }, { status: 413 });
+    }
+
+    const jobId = crypto.randomUUID();
+    const storagePath = `jobs/${jobId}/source/${safeFilename(file.name)}`;
     const supabase = getSupabaseAdmin();
     const bytes = new Uint8Array(await file.arrayBuffer());
+
+    // Validate the PDF magic header as well as the browser-supplied MIME type.
+    const header = new TextDecoder().decode(bytes.slice(0, 5));
+    if (header !== "%PDF-") {
+      return NextResponse.json({ error: "Fayl haqiqiy PDF emas." }, { status: 400 });
+    }
 
     const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, bytes, {
       contentType: "application/pdf",
@@ -48,8 +63,16 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      job: { id: jobId, filename: file.name, size: file.size, status: "uploaded",
-        progress: 0, currentPage: 0, totalPages: null, storagePath },
+      job: {
+        id: jobId,
+        filename: file.name,
+        size: file.size,
+        status: "uploaded",
+        progress: 0,
+        currentPage: 0,
+        totalPages: null,
+        storagePath,
+      },
     });
   } catch (error) {
     return NextResponse.json(
