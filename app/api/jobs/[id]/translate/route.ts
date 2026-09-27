@@ -24,7 +24,7 @@ export async function POST(
 
   const { data: blocks, error: blockError } = await supabase
     .from("text_blocks")
-    .select("id,source_text,x,y,width,height,confidence,status")
+    .select("id,source_text,translated_text,x,y,width,height,confidence,status")
     .eq("page_id", page.id)
     .order("created_at", { ascending: true });
 
