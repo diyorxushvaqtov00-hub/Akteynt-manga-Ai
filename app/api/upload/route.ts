@@ -30,8 +30,15 @@ export async function POST(request: Request) {
     if (uploadError) throw uploadError;
 
     const { error: dbError } = await supabase.from("translation_jobs").insert({
-      id: jobId, filename: file.name, status: "uploaded", progress: 0,
-      current_page: 0, total_pages: null, source_language: "auto", target_language: "uz",
+      id: jobId,
+      filename: file.name,
+      status: "uploaded",
+      progress: 0,
+      current_page: 0,
+      total_pages: null,
+      source_language: "auto",
+      target_language: "uz",
+      source_path: storagePath,
     });
 
     if (dbError) {
@@ -41,8 +48,16 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      job: { id: jobId, filename: file.name, size: file.size, status: "uploaded",
-        progress: 0, currentPage: 0, totalPages: null, storagePath },
+      job: {
+        id: jobId,
+        filename: file.name,
+        size: file.size,
+        status: "uploaded",
+        progress: 0,
+        currentPage: 0,
+        totalPages: null,
+        storagePath,
+      },
     });
   } catch (error) {
     return NextResponse.json(
