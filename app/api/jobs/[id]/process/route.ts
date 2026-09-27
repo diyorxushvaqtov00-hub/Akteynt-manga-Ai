@@ -149,7 +149,7 @@ export async function POST(
     if (renderError) throw renderError;
 
     await supabase.from("manga_pages").update({
-      status: "translated", translated_image_path: outputPath, error: null,
+      status: "translated", translated_image_path: outputPath, error: null, locked_at: null,
     }).eq("id", page.id);
 
     const completed = page.page_number;
