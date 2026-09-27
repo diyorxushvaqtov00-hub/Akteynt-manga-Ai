@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     const signResponse = await fetch(signUrl, {
       method: "POST",
       headers: {
-        apikey: publishableKey,
+        apikey: secretKey,
         Authorization: `Bearer ${publishableKey}`,
         "Content-Type": "application/json",
       },
