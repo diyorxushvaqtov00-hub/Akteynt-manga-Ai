@@ -26,26 +26,24 @@ export function UploadPanel() {
       });
 
       const initText = await initResponse.text();
-      let initData: { error?: string; jobId?: string; storagePath?: string; token?: string; supabaseUrl?: string } = {};
+      let initData: { error?: string; jobId?: string; storagePath?: string; token?: string; signedUrl?: string } = {};
       try {
         initData = JSON.parse(initText);
       } catch {
         throw new Error(initText.slice(0, 240) || "Upload serveridan noto'g'ri javob keldi.");
       }
 
-      if (!initResponse.ok || !initData.jobId || !initData.storagePath || !initData.token || !initData.supabaseUrl) {
+      if (!initResponse.ok || !initData.jobId || !initData.storagePath || !initData.token || !initData.signedUrl) {
         throw new Error(initData.error ?? "Upload boshlanmadi.");
       }
 
-      const uploadUrl = new URL(
-        `/storage/v1/object/upload/sign/${initData.storagePath}`,
-        initData.supabaseUrl,
-      );
-      uploadUrl.searchParams.set("token", initData.token);
-
-      const uploadResponse = await fetch(uploadUrl.toString(), {
-        method: "POST",
-        headers: { "Content-Type": "application/pdf", "x-upsert": "false" },
+      const uploadResponse = await fetch(initData.signedUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/pdf",
+          "Cache-Control": "3600",
+          "x-upsert": "false",
+        },
         body: file,
       });
 
