@@ -112,7 +112,7 @@ export async function POST(request: Request) {
           hasSignedUrl: Boolean(signedUrl),
           keyDiagnostics,
         },
-        error: signData.message || signData.error || signText.slice(0, 500) || "Supabase signed upload URL yaratmadi.",
+        error: signText.slice(0, 500) || "Supabase signed upload URL yaratmadi.",
       }, { status: 502 });
     }
 
