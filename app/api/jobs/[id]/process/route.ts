@@ -16,6 +16,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const supabase = getSupabaseAdmin();
+  let activePageId: string | null = null;
 
   try {
     const { data: job, error } = await supabase
@@ -46,7 +47,7 @@ export async function POST(
 
     const { data: pending, error: pendingError } = await supabase
       .from("manga_pages").select("id,page_number,status,original_image_path,attempts")
-      .eq("job_id", id).neq("status", "translated")
+      .eq("job_id", id).in("status", ["pending", "failed"]).lt("attempts", 3)
       .order("page_number", { ascending: true }).limit(1);
     if (pendingError) throw pendingError;
 
@@ -55,10 +56,19 @@ export async function POST(
     }
 
     const page = pending[0];
+    activePageId = page.id;
     const now = new Date().toISOString();
     const next = nextAttempt(page.attempts ?? 0);
     if (next === null) throw new Error("Sahifa uchun maksimal urinishlar soniga yetildi.");
-    await supabase.from("manga_pages").update({ attempts: next, last_attempt_at: now, locked_at: now }).eq("id", page.id);
+    const { data: claimedPage, error: claimError } = await supabase
+      .from("manga_pages")
+      .update({ attempts: next, last_attempt_at: now, locked_at: now, status: "processing" })
+      .eq("id", page.id)
+      .eq("status", page.status)
+      .select("id")
+      .maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimedPage) return NextResponse.json({ error: "Sahifa boshqa worker tomonidan olinmoqda." }, { status: 409 });
     if ((page.attempts ?? 0) > 0) await new Promise((resolve) => setTimeout(resolve, retryDelayMs(next)));
     await supabase.from("translation_jobs").update({
       status: "extracting", current_page: page.page_number,
@@ -168,7 +178,18 @@ export async function POST(
     return NextResponse.json({ ok: true, status: "completed", pageNumber: totalPages, totalPages, progress: 100, outputPath: outputPdfPath });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Pipeline xatosi.";
-    await supabase.from("translation_jobs").update({ status: "failed", error: message }).eq("id", id);
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (activePageId) {
+      const { data: failedPage } = await supabase.from("manga_pages").update({
+        status: "failed", error: message, locked_at: null,
+      }).eq("id", activePageId).select("attempts").maybeSingle();
+      if ((failedPage?.attempts ?? 0) >= 3) {
+        await supabase.from("translation_jobs").update({ status: "failed", error: message }).eq("id", id);
+      } else {
+        await supabase.from("translation_jobs").update({ status: "processing", error: message }).eq("id", id);
+      }
+    } else {
+      await supabase.from("translation_jobs").update({ status: "failed", error: message }).eq("id", id);
+    }
+    return NextResponse.json({ error: message, retryable: Boolean(activePageId) }, { status: 500 });
   }
 }
