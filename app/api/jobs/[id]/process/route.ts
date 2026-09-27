@@ -25,6 +25,11 @@ export async function POST(
       .eq("id", id).single();
     if (error || !job?.source_path) throw new Error("Job yoki source PDF topilmadi.");
 
+    await supabase.rpc("recover_stale_manga_pages", {
+      p_job_id: id,
+      p_timeout_seconds: 900,
+    });
+
     const { data: source, error: sourceError } = await supabase.storage.from(BUCKET).download(job.source_path);
     if (sourceError || !source) throw sourceError ?? new Error("Source PDF yuklanmadi.");
 
