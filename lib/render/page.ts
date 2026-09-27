@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import type { TextBlock } from "../ai/types";
 import { layoutText } from "./text-layout";
+import { cleanTextRegions } from "./clean-background";
 
 export interface RenderBlock extends TextBlock {
   translatedText: string;
@@ -10,7 +11,8 @@ export async function renderTranslatedPage(
   image: Uint8Array,
   blocks: RenderBlock[],
 ): Promise<Uint8Array> {
-  const base = sharp(image);
+  const cleaned = await cleanTextRegions(image, blocks.map(({ x, y, width, height }) => ({ x, y, width, height })));
+  const base = sharp(cleaned);
   const meta = await base.metadata();
   const width = meta.width ?? 1;
   const height = meta.height ?? 1;
