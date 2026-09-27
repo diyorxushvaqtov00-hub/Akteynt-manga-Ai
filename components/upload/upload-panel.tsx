@@ -37,14 +37,18 @@ export function UploadPanel() {
         throw new Error(initData.error ?? "Upload boshlanmadi.");
       }
 
+      // Supabase's official signed-upload flow uses PUT + multipart FormData
+      // for browser File/Blob bodies. Keep the signed URL and token untouched.
+      const uploadBody = new FormData();
+      uploadBody.append("cacheControl", "3600");
+      uploadBody.append("", file);
+
       const uploadResponse = await fetch(initData.signedUrl, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/pdf",
-          "Cache-Control": "3600",
           "x-upsert": "false",
         },
-        body: file,
+        body: uploadBody,
       });
 
       if (!uploadResponse.ok) {
