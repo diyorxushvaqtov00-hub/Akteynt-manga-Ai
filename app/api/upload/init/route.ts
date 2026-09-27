@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
@@ -27,11 +28,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "PDF hajmi 100 MB dan oshmasligi kerak." }, { status: 413 });
     }
 
-    const jobId = crypto.randomUUID();
-    const storagePath = `jobs/${jobId}/source/${safeFilename(filename)}`;
     const supabaseUrl = process.env.SUPABASE_URL || "";
     const secretKey = process.env.SUPABASE_SECRET_KEY || "";
-    const legacyServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+    if (!supabaseUrl || !secretKey) {
+      return NextResponse.json(
+        {
+          ok: false,
+          stage: "signed-url-create",
+          error: "SUPABASE_URL yoki SUPABASE_SECRET_KEY sozlanmagan.",
+        },
+        { status: 500 },
+      );
+    }
 
     const urlInfo = (() => {
       try {
@@ -42,163 +51,53 @@ export async function POST(request: Request) {
       }
     })();
 
-    // Supabase's new sb_secret_* keys are opaque API keys, not JWTs.
-    // The Storage signed-upload endpoint still requires a JWT-style
-    // Authorization credential for this server-side operation. Prefer the
-    // legacy service_role JWT when it is available; keep sb_secret_* on apikey.
-    const authKey = legacyServiceRoleKey;
-    const apiKey = secretKey || legacyServiceRoleKey;
-
-    const keyParts = authKey.split(".");
-    let keyRole: string | null = null;
-    let keyRef: string | null = null;
-    let keyParseError: string | null = null;
-    if (keyParts.length === 3) {
-      try {
-        const payload = JSON.parse(Buffer.from(keyParts[1], "base64url").toString("utf8")) as {
-          role?: unknown;
-          ref?: unknown;
-        };
-        keyRole = typeof payload.role === "string" ? payload.role : null;
-        keyRef = typeof payload.ref === "string" ? payload.ref : null;
-      } catch {
-        keyParseError = "JWT payload decode failed";
-      }
-    } else {
-      keyParseError = "JWT must contain 3 segments";
-    }
-
-    const expectedRef = urlInfo.host.endsWith(".supabase.co")
-      ? urlInfo.host.split(".")[0]
-      : null;
-
-    const keyDiagnostics = {
-      present: Boolean(authKey),
-      segments: keyParts.length,
-      role: keyRole,
-      ref: keyRef,
-      expectedRef,
-      refMatchesUrl: Boolean(keyRef && expectedRef && keyRef === expectedRef),
-      parseError: keyParseError,
-    };
-
-    if (!supabaseUrl || !apiKey) {
-      return NextResponse.json({
-        ok: false,
-        stage: "signed-url-create",
-        error: "Supabase URL yoki API key sozlanmagan.",
-        diagnostic: {
-          supabaseHost: urlInfo.host,
-          protocol: urlInfo.protocol,
-          bucket: BUCKET,
-          hasToken: false,
-          hasSignedUrl: false,
-          keyDiagnostics,
-        },
-      }, { status: 500 });
-    }
-
-    if (!authKey || keyParts.length !== 3 || keyRole !== "service_role") {
-      return NextResponse.json({
-        ok: false,
-        stage: "signed-url-create",
-        error:
-          "Supabase Storage signed upload uchun legacy service_role JWT kerak. Vercel Environment Variables ga SUPABASE_SERVICE_ROLE_KEY ni qo'shing. sb_secret_* kalitni SUPABASE_SECRET_KEY sifatida qoldiring.",
-        diagnostic: {
-          supabaseHost: urlInfo.host,
-          protocol: urlInfo.protocol,
-          bucket: BUCKET,
-          hasToken: false,
-          hasSignedUrl: false,
-          keyDiagnostics,
-          requiresLegacyServiceRoleJwt: true,
-        },
-      }, { status: 500 });
-    }
-
-    const signUrl =
-      supabaseUrl +
-      "/storage/v1/object/upload/sign/" +
-      encodeURIComponent(BUCKET) +
-      "/" +
-      storagePath.split("/").map(encodeURIComponent).join("/");
-
-    const signResponse = await fetch(signUrl, {
-      method: "POST",
-      headers: {
-        apikey: apiKey,
-        Authorization: `Bearer ${authKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-      cache: "no-store",
+    // Supabase's modern sb_secret_* key is the supported server-side
+    // replacement for the legacy service_role JWT. Let supabase-js handle
+    // the Storage authentication instead of manually constructing a JWT
+    // Authorization header.
+    const supabase = createClient(supabaseUrl, secretKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const signText = await signResponse.text();
-    let signData: {
-      token?: string;
-      signedUrl?: string;
-      signedURL?: string;
-      message?: string;
-      error?: string;
-    } = {};
+    const jobId = crypto.randomUUID();
+    const storagePath = `jobs/${jobId}/source/${safeFilename(filename)}`;
 
-    try {
-      signData = JSON.parse(signText);
-    } catch {
-      // Keep raw response for diagnostics.
-    }
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUploadUrl(storagePath, { upsert: false });
 
-    const token = signData.token;
-    const signedUrl = signData.signedUrl || signData.signedURL;
-
-    if (!signResponse.ok || !token || !signedUrl) {
+    if (error || !data?.token || !data?.signedUrl) {
       console.error("[upload/init] signed URL creation failed", {
         stage: "signed-url-create",
-        httpStatus: signResponse.status,
         supabaseHost: urlInfo.host,
         bucket: BUCKET,
-        hasToken: Boolean(token),
-        hasSignedUrl: Boolean(signedUrl),
-        response: signText.slice(0, 500),
+        message: error?.message,
+        name: error?.name,
       });
 
-      return NextResponse.json({
-        ok: false,
-        stage: "signed-url-create",
-        diagnostic: {
-          supabaseHost: urlInfo.host,
-          protocol: urlInfo.protocol,
-          bucket: BUCKET,
-          hasToken: Boolean(token),
-          hasSignedUrl: Boolean(signedUrl),
-          keyDiagnostics,
-          httpStatus: signResponse.status,
-          response: signText.slice(0, 500),
+      return NextResponse.json(
+        {
+          ok: false,
+          stage: "signed-url-create",
+          error: error?.message || "Supabase signed upload URL yaratmadi.",
+          diagnostic: {
+            supabaseHost: urlInfo.host,
+            protocol: urlInfo.protocol,
+            bucket: BUCKET,
+            hasToken: Boolean(data?.token),
+            hasSignedUrl: Boolean(data?.signedUrl),
+          },
         },
-        error:
-          signData.message ||
-          signData.error ||
-          signText.slice(0, 500) ||
-          "Supabase signed upload URL yaratmadi.",
-      }, { status: 502 });
+        { status: 502 },
+      );
     }
-
-    console.info("[upload/init] signed URL created", {
-      stage: "signed-url-create",
-      supabaseHost: urlInfo.host,
-      protocol: urlInfo.protocol,
-      bucket: BUCKET,
-      hasToken: true,
-      hasSignedUrl: true,
-    });
 
     return NextResponse.json({
       ok: true,
       jobId,
       storagePath,
-      token,
-      signedUrl,
+      token: data.token,
+      signedUrl: data.signedUrl,
       bucket: BUCKET,
     });
   } catch (error) {
