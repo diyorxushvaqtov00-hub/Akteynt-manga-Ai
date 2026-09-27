@@ -28,15 +28,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "PDF hajmi 100 MB dan oshmasligi kerak." }, { status: 413 });
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || "";
-    const secretKey = process.env.SUPABASE_SECRET_KEY || "";
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
     if (!supabaseUrl || !secretKey) {
       return NextResponse.json(
         {
           ok: false,
           stage: "signed-url-create",
-          error: "SUPABASE_URL yoki SUPABASE_SECRET_KEY sozlanmagan.",
+          error: "Supabase URL yoki server API key sozlanmagan. SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL va SUPABASE_SECRET_KEY/SUPABASE_SERVICE_ROLE_KEY kerak.",
         },
         { status: 500 },
       );
