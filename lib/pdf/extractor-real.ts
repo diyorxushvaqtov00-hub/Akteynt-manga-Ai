@@ -19,6 +19,7 @@ export class PdfJsExtractor implements PdfExtractor {
     const context = canvas.getContext("2d");
 
     await page.render({
+      canvas: canvas as never,
       canvasContext: context as never,
       viewport,
     }).promise;
