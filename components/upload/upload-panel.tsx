@@ -22,7 +22,7 @@ export function UploadPanel() {
 
       if (!response.ok) throw new Error(data.error ?? "Upload xatosi.");
 
-      setMessage(`PDF qabul qilindi. Job ID: ${data.job.id}`);
+      window.location.href = "/translate/" + data.job.id;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Noma'lum xato.");
     } finally {
