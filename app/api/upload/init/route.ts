@@ -45,8 +45,8 @@ export async function POST(request: Request) {
       jobId,
       storagePath,
       token: data.token,
+      signedUrl: data.signedUrl,
       bucket: BUCKET,
-      supabaseUrl: process.env.SUPABASE_URL,
     });
   } catch (error) {
     return NextResponse.json(
