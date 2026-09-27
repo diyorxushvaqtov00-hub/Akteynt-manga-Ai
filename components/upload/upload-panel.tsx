@@ -57,8 +57,8 @@ export function UploadPanel() {
       }
 
       if (!initResponse.ok || !initData.jobId || !initData.storagePath || !initData.token || !initData.signedUrl) {
-        const stage = (initData as { stage?: string }).stage;
-        const diagnostic = (initData as { diagnostic?: { supabaseHost?: string; protocol?: string; bucket?: string; hasToken?: boolean; hasSignedUrl?: boolean } }).diagnostic;
+        const stage = initData.stage;
+        const diagnostic = initData.diagnostic;
         throw new Error(
           [
             stage ? `Bosqich: ${stage}` : "Bosqich: upload/init",
