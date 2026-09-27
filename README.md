@@ -29,10 +29,7 @@ npm run dev
 `.env.local` ichida:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_STORAGE_BUCKET` — odatda `manga-files`
 - `AI_GATEWAY_API_KEY`
-- `AI_VISION_MODEL`
-- `AI_TRANSLATION_MODEL`
 
 **Service role key faqat serverda saqlanadi; uni frontend kodiga chiqarmang.**
 
@@ -72,7 +69,8 @@ Reader / Download
 ```
 
 ## API
-- `POST /api/upload` — PDF yuklash
+- `POST /api/upload/init` — upload uchun signed URL olish
+- `POST /api/upload/finalize` — uploadni job bilan bog‘lash
 - `GET /api/jobs/:id` — job holati
 - `POST /api/jobs/:id/process` — navbatdagi sahifani qayta ishlash
 - `GET /api/jobs/:id/pages` — sahifalar
