@@ -1,11 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { Upload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 export function UploadPanel() {
   const [file, setFile] = useState<File | null>(null);
@@ -18,12 +15,6 @@ export function UploadPanel() {
     setMessage("");
 
     try {
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error("NEXT_PUBLIC_SUPABASE_URL yoki NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY sozlanmagan.");
-      }
-
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
       const initResponse = await fetch("/api/upload/init", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,13 +37,22 @@ export function UploadPanel() {
         throw new Error(initData.error ?? "Upload boshlanmadi.");
       }
 
-      const { error: uploadError } = await supabase.storage
-        .from("manga-files")
-        .uploadToSignedUrl(initData.storagePath, initData.token, file, {
-          contentType: "application/pdf",
-        });
+      const uploadUrl = new URL(
+        `/storage/v1/object/upload/sign/${initData.storagePath}`,
+        window.location.origin,
+      );
+      uploadUrl.searchParams.set("token", initData.token);
 
-      if (uploadError) throw uploadError;
+      const uploadResponse = await fetch(uploadUrl.toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/pdf", "x-upsert": "false" },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        const uploadText = await uploadResponse.text();
+        throw new Error(uploadText || "PDF Supabase Storage'ga yuklanmadi.");
+      }
 
       const finalizeResponse = await fetch("/api/upload/finalize", {
         method: "POST",
