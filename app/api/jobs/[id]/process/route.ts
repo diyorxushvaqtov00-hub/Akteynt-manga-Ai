@@ -57,7 +57,6 @@ export async function POST(
       }, { status: 422 });
     }
 
-    });
 
     const { data: source, error: sourceError } = await supabase.storage.from(BUCKET).download(job.source_path);
     if (sourceError || !source) throw sourceError ?? new Error("Source PDF yuklanmadi.");
