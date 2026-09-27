@@ -1,46 +1,32 @@
 import { NextResponse } from "next/server";
-import { createPageRecords, calculateProgress, type MangaPage } from "@/lib/pdf/pipeline";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
-const jobs = new Map<string, MangaPage[]>();
-
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const body = await request.json().catch(() => ({}));
-  const totalPages = Number(body.totalPages);
-
-  if (!Number.isInteger(totalPages) || totalPages < 1 || totalPages > 200) {
-    return NextResponse.json(
-      { error: "Sahifalar soni 1–200 oralig'ida bo'lishi kerak." },
-      { status: 400 },
-    );
-  }
-
-  const pages = createPageRecords(id, totalPages);
-  jobs.set(id, pages);
-
-  return NextResponse.json({
-    ok: true,
-    jobId: id,
-    totalPages,
-    progress: calculateProgress(pages),
-    pages,
-  });
-}
+export const runtime = "nodejs";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const pages = jobs.get(id) ?? [];
+  const supabase = getSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("manga_pages")
+    .select("id,page_number,status,original_image_path,translated_image_path,error")
+    .eq("job_id", id)
+    .order("page_number", { ascending: true });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const total = data.length;
+  const completed = data.filter((p) => p.status === "translated").length;
+  const progress = total ? Math.round((completed / total) * 100) : 0;
 
   return NextResponse.json({
     jobId: id,
-    totalPages: pages.length,
-    progress: calculateProgress(pages),
-    pages,
+    totalPages: total,
+    completedPages: completed,
+    progress,
+    pages: data,
   });
 }
