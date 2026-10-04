@@ -1,67 +1,91 @@
+import type { TextAlign, TextDirection } from "../ai/types";
+
 export interface TextLayoutInput {
   text: string;
   boxWidth: number;
   boxHeight: number;
+  preferredFontSize?: number;
+  direction?: TextDirection;
 }
 
 export interface TextLayout {
   fontSize: number;
   lines: string[];
   lineHeight: number;
+  direction: TextDirection;
 }
 
 export function layoutText(input: TextLayoutInput): TextLayout {
   const text = input.text.trim();
-  if (!text) return { fontSize: 18, lines: [], lineHeight: 22 };
+  const direction = input.direction ?? "horizontal";
+  if (!text) return { fontSize: 18, lines: [], lineHeight: 22, direction };
 
   const boxWidth = Math.max(20, input.boxWidth);
   const boxHeight = Math.max(20, input.boxHeight);
-  const words = text.split(/\s+/).filter(Boolean);
-  const maxLines = Math.max(1, Math.floor(boxHeight / 18));
+  const preferred = Math.max(10, Math.min(72, input.preferredFontSize ?? 28));
 
-  let fontSize = Math.max(10, Math.min(30, Math.floor(boxWidth / 15)));
-  let lines = wrapWords(words, Math.max(8, Math.floor(boxWidth / Math.max(7, fontSize * 0.55))));
+  let fontSize = preferred;
+  let lines = wrapText(text, boxWidth, fontSize);
+  const maxHeight = boxHeight * 0.88;
 
-  while (lines.length > maxLines && fontSize > 10) {
+  while (fontSize > 9 && lines.length * fontSize * 1.18 > maxHeight) {
     fontSize -= 1;
-    lines = wrapWords(words, Math.max(8, Math.floor(boxWidth / Math.max(7, fontSize * 0.55))));
+    lines = wrapText(text, boxWidth, fontSize);
   }
 
-  if (lines.length > maxLines) {
-    lines = lines.slice(0, maxLines);
-    const last = lines[maxLines - 1] ?? "";
-    lines[maxLines - 1] = last.length > 3 ? last.slice(0, Math.max(1, last.length - 1)) + "…" : last;
+  while (fontSize > 9 && lines.some((line) => estimateWidth(line, fontSize) > boxWidth * 0.92)) {
+    fontSize -= 1;
+    lines = wrapText(text, boxWidth, fontSize);
   }
 
-  const lineHeight = Math.max(14, Math.min(Math.floor(boxHeight / Math.max(1, lines.length)), Math.round(fontSize * 1.25)));
-
-  return { fontSize, lines, lineHeight };
+  const lineHeight = Math.max(11, Math.min(boxHeight, Math.round(fontSize * 1.18)));
+  return { fontSize, lines, lineHeight, direction };
 }
 
-function wrapWords(words: string[], maxChars: number) {
-  const lines: string[] = [];
-  let current = "";
+function estimateWidth(text: string, fontSize: number) {
+  return [...text].reduce((sum, ch) => sum + (/[\u4e00-\u9fff\u3040-\u30ff]/.test(ch) ? fontSize : fontSize * 0.52), 0);
+}
 
-  for (const word of words) {
-    if (word.length > maxChars && !current) {
-      let rest = word;
-      while (rest.length > maxChars) {
-        lines.push(rest.slice(0, maxChars - 1) + "-");
-        rest = rest.slice(maxChars - 1);
-      }
-      current = rest;
+function wrapText(text: string, boxWidth: number, fontSize: number) {
+  const maxChars = Math.max(2, Math.floor(boxWidth / Math.max(5, fontSize * 0.52)));
+  const paragraphs = text.split(/\n+/);
+  const lines: string[] = [];
+
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      lines.push("");
       continue;
     }
 
-    const candidate = current ? `${current} ${word}` : word;
-    if (candidate.length > maxChars && current) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = candidate;
+    let current = "";
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (current && (candidate.length > maxChars || estimateWidth(candidate, fontSize) > boxWidth * 0.92)) {
+        lines.push(current);
+        current = word;
+      } else if (!current && estimateWidth(word, fontSize) > boxWidth * 0.92) {
+        let chunk = "";
+        for (const char of [...word]) {
+          const next = chunk + char;
+          if (estimateWidth(next, fontSize) > boxWidth * 0.92 && chunk) {
+            lines.push(chunk);
+            chunk = char;
+          } else {
+            chunk = next;
+          }
+        }
+        current = chunk;
+      } else {
+        current = candidate;
+      }
     }
+    if (current) lines.push(current);
   }
 
-  if (current) lines.push(current);
   return lines;
+}
+
+export function anchorForAlign(align: TextAlign) {
+  return align === "left" ? "start" : align === "right" ? "end" : "middle";
 }
