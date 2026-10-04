@@ -34,6 +34,11 @@ export async function POST(
   try {
     const provider = getVisionProvider();
     const translated = [];
+    const pageContext = blocks
+      .map((block) => block.source_text)
+      .filter(Boolean)
+      .join(" | ")
+      .slice(0, 5000);
 
     for (const block of blocks) {
       if (block.status === "translated" && block.translated_text) {
