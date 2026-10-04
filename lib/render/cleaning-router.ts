@@ -1,4 +1,3 @@
-import sharp from "sharp";
 import type { TextBlock } from "../ai/types";
 import { cleanTextRegions } from "./clean-background";
 import { cleanComplexBackgroundWithAI } from "./ai-inpaint";
