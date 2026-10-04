@@ -28,5 +28,5 @@ export async function cleanPage(image:Uint8Array, blocks:TextBlock[]):Promise<Cl
   }
   if(!cleaned.byteLength) throw new Error("Cleaning produced an empty image.");
   const qa = await verifyCleaning(image, cleaned, blocks);
-  return {image:cleaned,decisions,aiUsed:complexBlocks.length>0,safe:qa.safe};
+  return {image:cleaned,decisions,aiUsed:complexBlocks.length>0,safe:qa.safe,errors:qa.errors};
 }
