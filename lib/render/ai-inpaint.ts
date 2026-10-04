@@ -9,7 +9,7 @@ const FALLBACK_MODELS = (process.env.AI_INPAINT_FALLBACK_MODELS || 'google/gemin
   .filter(Boolean);
 
 function blockDescription(block: TextBlock) {
-  const s: TextBlock["style"] = block.style;
+  const s: NonNullable<TextBlock["style"]> = block.style ?? { regionType: "unknown" };
   return '(' + Math.round(block.x) + ',' + Math.round(block.y) + ',' + Math.round(block.width) + 'x' + Math.round(block.height) + ') type=' + (s.regionType ?? 'unknown') + ' role=' + (s.visualRole ?? 'unknown') + ' text="' + block.text.slice(0,120) + '"';
 }
 
