@@ -12,7 +12,7 @@ export async function GET(
 
   const { data: job, error } = await supabase
     .from("translation_jobs")
-    .select("id,filename,status,progress,current_page,total_pages,source_language,target_language,error,output_path,created_at,updated_at")
+    .select("id,filename,status,stage,progress,current_page,total_pages,source_language,target_language,error,output_path,created_at,updated_at")
     .eq("id", id).single();
 
   if (error || !job) return NextResponse.json({ error: "Job topilmadi." }, { status: 404 });
@@ -21,6 +21,7 @@ export async function GET(
     id: job.id,
     filename: job.filename,
     status: job.status,
+    stage: job.stage,
     progress: job.progress,
     currentPage: job.current_page,
     totalPages: job.total_pages,
