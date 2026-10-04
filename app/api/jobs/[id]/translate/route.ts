@@ -24,7 +24,7 @@ export async function POST(
 
   const { data: blocks, error: blockError } = await supabase
     .from("text_blocks")
-    .select("id,source_text,translated_text,x,y,width,height,confidence,status")
+    .select("id,source_text,translated_text,x,y,width,height,confidence,status,region_type,style")
     .eq("page_id", page.id)
     .order("created_at", { ascending: true });
 
@@ -41,7 +41,11 @@ export async function POST(
         continue;
       }
 
-      const text = await provider.translate(block.source_text);
+      const text = await provider.translate(
+        block.source_text,
+        `Manga page context: ${pageContext}
+Region type: ${block.region_type ?? "unknown"}`,
+      );
       const { error } = await supabase.from("text_blocks").update({
         translated_text: text,
         status: "translated",
