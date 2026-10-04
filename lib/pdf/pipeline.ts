@@ -21,7 +21,7 @@ export function createPageRecords(jobId:string,totalPages:number):MangaPage[]{
 }
 export function calculateProgress(pages:MangaPage[]){
   if(!pages.length)return 0;
-  return Math.round((pages.filter(p=>p.status==="translated"||p.stage==="READY").length/pages.length)*100);
+  return Math.round((pages.filter(p=>p.stage==="READY").length/pages.length)*100);
 }
 export function assertStageOrder(current:PipelineStage,next:PipelineStage){
   const order:PipelineStage[]=["UPLOADED","EXTRACTED","NORMALIZED","DETECTED","OCR_DONE","ANALYZED","TRANSLATED","TRANSLATION_QA","CLEAN_PLAN_READY","CLEANED","CLEAN_QA","TYPESET","VISUAL_QA","READY"];
