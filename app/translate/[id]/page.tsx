@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, Loader2, AlertCircle, Download, BookOpen } from "lucide-react";
 
 type Job = {
-  id: string; filename: string; status: string; progress: number;
+  id: string; filename: string; status: string; stage: string; progress: number;
   currentPage: number; totalPages: number | null; error: string | null; updatedAt: string;
 };
 
@@ -65,6 +65,7 @@ export default function TranslatePage({ params }: { params: Promise<{ id: string
 
         <div className="mt-3 flex justify-between text-sm text-zinc-400">
           <span>{job.progress}%</span>
+          <span>{job.stage.replaceAll("_", " ")}</span>
           <span>{job.currentPage} / {job.totalPages ?? "—"} sahifa</span>
         </div>
 
