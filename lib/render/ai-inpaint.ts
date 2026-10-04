@@ -2,7 +2,11 @@ import { generateText } from 'ai';
 import sharp from 'sharp';
 import type { TextBlock } from '../ai/types';
 
-const MODEL = process.env.AI_INPAINT_MODEL || 'google/gemini-3.1-flash-image';
+const PRIMARY_MODEL = process.env.AI_INPAINT_MODEL || 'google/gemini-2.5-flash-image';
+const FALLBACK_MODELS = (process.env.AI_INPAINT_FALLBACK_MODELS || 'google/gemini-3.1-flash-image')
+  .split(',')
+  .map(v => v.trim())
+  .filter(Boolean);
 
 function blockDescription(block: TextBlock) {
   const s = block.style ?? {};
@@ -10,7 +14,10 @@ function blockDescription(block: TextBlock) {
 }
 
 export async function cleanComplexBackgroundWithAI(image: Uint8Array, blocks: TextBlock[]): Promise<Uint8Array> {
-  if (process.env.AI_INPAINT_ENABLED === 'false') throw new Error('Murakkab artwork matnini xavfsiz tozalash uchun AI inpainting yoqilgan bo‘lishi kerak.');
+  if (process.env.AI_INPAINT_ENABLED === 'false') {
+    throw new Error('Murakkab artwork matnini xavfsiz tozalash uchun AI inpainting yoqilgan bo‘lishi kerak.');
+  }
+
   const complex = blocks.filter(block => {
     const mode = block.style?.backgroundMode ?? 'complex';
     return mode === 'complex' || ['sfx','background','sign'].includes(block.style?.regionType ?? '');
@@ -31,18 +38,42 @@ export async function cleanComplexBackgroundWithAI(image: Uint8Array, blocks: Te
     '- Do not redraw the page. This is precise inpainting, not image generation.'
   ].join('\n');
 
-  const result = await generateText({
-    model: MODEL,
-    providerOptions: { gateway: { models: ['google/gemini-3.1-flash-image','google/gemini-2.5-flash-image'] }, google: { responseModalities: ['TEXT','IMAGE'] } },
-    messages: [{ role: 'user', content: [
-      { type: 'text', text: prompt },
-      { type: 'image', image: jpeg, mediaType: 'image/jpeg' }
-    ] }],
-    maxOutputTokens: 1024
-  });
+  const models = [PRIMARY_MODEL, ...FALLBACK_MODELS.filter(model => model !== PRIMARY_MODEL)];
+  let generated: { uint8Array?: Uint8Array; mediaType: string } | undefined;
+  let lastError: unknown = null;
 
-  const generated = result.files?.find(file => file.mediaType.startsWith('image/'));
-  if (!generated?.uint8Array) throw new Error('AI inpainting modeli rasm qaytarmadi.');
+  for (const model of models) {
+    try {
+      const result = await generateText({
+        model,
+        providerOptions: {
+          gateway: { models },
+          google: { responseModalities: ['TEXT', 'IMAGE'] }
+        },
+        messages: [{ role: 'user', content: [
+          { type: 'text', text: prompt },
+          { type: 'image', image: jpeg, mediaType: 'image/jpeg' }
+        ] }],
+        maxOutputTokens: 1024
+      });
+
+      generated = result.files?.find(file => file.mediaType.startsWith('image/'));
+      if (generated?.uint8Array) break;
+      lastError = new Error('Model rasm qaytarmadi: ' + model);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!generated?.uint8Array) {
+    const detail = lastError instanceof Error ? lastError.message : String(lastError);
+    throw new Error(
+      'Original yozuvni xavfsiz tozalash uchun AI inpainting modeli mavjud emas. ' +
+      'AI_INPAINT_MODEL yoki AI_INPAINT_FALLBACK_MODELS ni ishlaydigan image modelga sozlang. ' +
+      'Oxirgi xato: ' + detail
+    );
+  }
+
   const originalMeta = await sharp(image).metadata();
   if (!originalMeta.width || !originalMeta.height) throw new Error('Original rasm o‘lchami aniqlanmadi.');
   return new Uint8Array(await sharp(generated.uint8Array).resize({ width: originalMeta.width, height: originalMeta.height, fit: 'fill' }).png().toBuffer());
