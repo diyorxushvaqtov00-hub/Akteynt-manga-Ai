@@ -67,7 +67,7 @@ export async function POST(
 
     if (!job.total_pages) {
       await supabase.from("translation_jobs").update({
-        status: "processing", total_pages: totalPages, current_page: 0, progress: 0,
+        status: "processing", stage: "UPLOADED", total_pages: totalPages, current_page: 0, progress: 0,
       }).eq("id", id);
 
       const rows = Array.from({ length: totalPages }, (_, i) => ({
@@ -116,13 +116,13 @@ export async function POST(
         contentType: "image/png", upsert: true,
       });
       if (uploadError) throw uploadError;
-      await supabase.from("manga_pages").update({ original_image_path: imagePath, status: "processing" }).eq("id", page.id);
+      await supabase.from("manga_pages").update({ original_image_path: imagePath, status: "processing", stage: "EXTRACTED" }).eq("id", page.id);
     }
 
     const { data: image } = await supabase.storage.from(BUCKET).download(imagePath);
     if (!image) throw new Error("Page image yuklanmadi.");
 
-    await supabase.from("manga_pages").update({ status: "analyzing" }).eq("id", page.id);
+    await supabase.from("manga_pages").update({ status: "analyzing", stage: "ANALYZED" }).eq("id", page.id);
     // Detection is the first strict pipeline stage after extraction.
     const vision = await getVisionProvider().detectText(new Uint8Array(await image.arrayBuffer()));
 
@@ -145,8 +145,11 @@ export async function POST(
       if (blockError) throw blockError;
     }
 
+    await supabase.from("manga_pages").update({ stage: "DETECTED" }).eq("id", page.id);
+
     await supabase.from("translation_jobs").update({
-      status: "translating", progress: Math.max(2, Math.round(((page.page_number - 0.5) / totalPages) * 90)),
+      status: "translating",
+      stage: "TRANSLATED", progress: Math.max(2, Math.round(((page.page_number - 0.5) / totalPages) * 90)),
     }).eq("id", id);
 
     const { data: storedBlocks } = await supabase.from("text_blocks")
@@ -154,6 +157,7 @@ export async function POST(
       .eq("page_id", page.id).order("created_at", { ascending: true });
 
     const provider = getVisionProvider();
+    await supabase.from("manga_pages").update({ stage: "OCR_DONE" }).eq("id", page.id);
     const pageContext = (storedBlocks ?? [])
       .map((block, index) => {
         const style = (block.style ?? {}) as Record<string, unknown>;
@@ -197,7 +201,7 @@ export async function POST(
       .select("id,source_text,translated_text,x,y,width,height,confidence,region_type,style")
       .eq("page_id", page.id).eq("status", "translated");
 
-    await supabase.from("manga_pages").update({ status: "rendering" }).eq("id", page.id);
+    await supabase.from("manga_pages").update({ status: "rendering", stage: "CLEAN_PLAN_READY" }).eq("id", page.id);
     // renderTranslatedPage contains CLEAN_QA and VISUAL_QA blocking gates.
     const rendered = await renderTranslatedPage(
       new Uint8Array(await image.arrayBuffer()),
@@ -207,19 +211,22 @@ export async function POST(
     );
 
     const outputPath = "jobs/" + id + "/pages/" + String(page.page_number).padStart(4, "0") + "-uz.png";
-    const { error: renderError } = await supabase.storage.from(BUCKET).upload(outputPath, rendered, {
+    const { error: renderError } = await supabase.from("manga_pages").update({ stage: "CLEAN_QA" }).eq("id", page.id);
+    await supabase.from("manga_pages").update({ stage: "TYPESET" }).eq("id", page.id);
+    await supabase.storage.from(BUCKET).upload(outputPath, rendered, {
       contentType: "image/png", upsert: true,
     });
     if (renderError) throw renderError;
 
     await supabase.from("manga_pages").update({
-      status: "translated", translated_image_path: outputPath, error: null, locked_at: null,
+      status: "translated", stage: "VISUAL_QA", translated_image_path: outputPath, error: null, locked_at: null,
     }).eq("id", page.id);
 
     const completed = page.page_number;
     const progress = Math.min(94, Math.round((completed / totalPages) * 94));
     await supabase.from("translation_jobs").update({
       status: completed === totalPages ? "assembling" : "processing",
+      stage: completed === totalPages ? "VISUAL_QA" : "VISUAL_QA",
       current_page: completed, progress,
     }).eq("id", id);
 
@@ -247,7 +254,7 @@ export async function POST(
     if (pdfError) throw pdfError;
 
     await supabase.from("translation_jobs").update({
-      status: "completed", progress: 100, current_page: totalPages, output_path: outputPdfPath, error: null,
+      status: "completed", stage: "READY", progress: 100, current_page: totalPages, output_path: outputPdfPath, error: null,
     }).eq("id", id);
 
     return NextResponse.json({ ok: true, status: "completed", pageNumber: totalPages, totalPages, progress: 100, outputPath: outputPdfPath });
