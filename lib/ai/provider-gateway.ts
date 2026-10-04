@@ -95,7 +95,7 @@ export class GatewayVisionProvider implements VisionProvider {
       model: process.env.AI_TRANSLATION_MODEL || MODEL,
       system: UZBEK_TRANSLATION_PROMPT,
       providerOptions: {
-        gateway: { models: ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"] },
+        gateway: { models: ["google/gemini-3.7-flash", "google/gemini-3.5-flash", "google/gemini-2.5-flash-lite"] },
       },
       maxOutputTokens: 1200,
       prompt: context ? `Context:
