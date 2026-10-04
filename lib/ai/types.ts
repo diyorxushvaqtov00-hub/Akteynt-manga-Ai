@@ -26,19 +26,28 @@ export interface TextStyle {
   confidence?: number;
   fontFamilyGuess?: string;
   sizeRatio?: number;
-  fillColor?: string;
-  strokeColor?: string;
-  strokeWidth?: number;
-  backgroundMode?: 'solid' | 'transparent' | 'complex';
-  preserveArtwork?: boolean;
   preserveArtwork?: boolean;
 }
 
 export interface TextBlock {
-  id: string; text: string; x: number; y: number; width: number; height: number;
-  confidence?: number; style?: TextStyle;
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  confidence?: number;
+  style?: TextStyle;
 }
 
-export interface VisionPageResult { pageWidth: number; pageHeight: number; blocks: TextBlock[]; }
+export interface VisionPageResult {
+  pageWidth: number;
+  pageHeight: number;
+  blocks: TextBlock[];
+}
 
-export interface TranslationResult { source: string; target: string; blockId: string; }
+export interface TranslationResult {
+  source: string;
+  target: string;
+  blockId: string;
+}
