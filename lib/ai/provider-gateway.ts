@@ -38,7 +38,8 @@ const visionSchema = z.object({
   })),
 });
 
-const MODEL = process.env.AI_VISION_MODEL || "google/gemini-2.5-flash";
+const MODEL = process.env.AI_VISION_MODEL || "google/gemini-3.5-flash";
+const FALLBACK_MODELS = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
 
 function normalizeColor(value: unknown, fallback: string) {
   if (typeof value !== "string") return fallback;
@@ -52,6 +53,10 @@ export class GatewayVisionProvider implements VisionProvider {
       model: MODEL,
       schema: visionSchema,
       system: MANGA_VISION_PROMPT,
+      providerOptions: {
+        gateway: { models: FALLBACK_MODELS },
+      },
+      maxOutputTokens: 12000,
       messages: [{
         role: "user",
         content: [
@@ -89,6 +94,10 @@ export class GatewayVisionProvider implements VisionProvider {
     const { text: result } = await generateText({
       model: process.env.AI_TRANSLATION_MODEL || MODEL,
       system: UZBEK_TRANSLATION_PROMPT,
+      providerOptions: {
+        gateway: { models: ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"] },
+      },
+      maxOutputTokens: 1200,
       prompt: context ? `Context:
 ${context}
 
