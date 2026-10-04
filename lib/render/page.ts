@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import type { TextBlock } from '../ai/types';
 import { layoutText, anchorForAlign } from './text-layout';
 import { cleanPage } from './cleaning-router';
+import { assertCleaningSafe, validateRenderedPage } from './visual-qa';
 
 export interface RenderBlock extends TextBlock { translatedText: string; }
 function esc(value: string) { return value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;'); }
@@ -20,6 +21,7 @@ function fontFamily(category?: string, role?: string) {
 export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBlock[]): Promise<Uint8Array> {
   const cleaning = await cleanPage(image, blocks);
   if (!cleaning.safe) throw new Error('Cleaning QA: sahifa xavfsiz tozalanmadi; typesetting to‘xtatildi.');
+  assertCleaningSafe(cleaning);
   const cleaned = cleaning.image;
 
   const base = sharp(cleaned);
@@ -63,7 +65,10 @@ export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBloc
     });
   }
 
-  if (!linesSvg.length) return image;
+  if (!linesSvg.length) return cleaned;
   const svg = Buffer.from('<svg width="'+width+'" height="'+height+'" xmlns="http://www.w3.org/2000/svg">'+linesSvg.join('')+'</svg>');
-  return new Uint8Array(await base.composite([{ input: svg }]).png().toBuffer());
+  const rendered = new Uint8Array(await base.composite([{ input: svg }]).png().toBuffer());
+  const qa = await validateRenderedPage(rendered, blocks);
+  if (!qa.safe) throw new Error('VISUAL_QA_FAILED: ' + qa.errors.join(' | '));
+  return rendered;
 }
