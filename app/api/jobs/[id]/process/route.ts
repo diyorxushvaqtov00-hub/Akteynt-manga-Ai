@@ -126,8 +126,18 @@ export async function POST(
     const vision = await getVisionProvider().detectText(new Uint8Array(await image.arrayBuffer()));
 
     const blocks = vision.blocks.map((b) => ({
-      id: uuidFromBlockKey(page.id, b.id), page_id: page.id, block_key: b.id, source_text: b.text,
-      x: b.x, y: b.y, width: b.width, height: b.height, confidence: b.confidence ?? null, status: "detected",
+      id: uuidFromBlockKey(page.id, b.id),
+      page_id: page.id,
+      block_key: b.id,
+      source_text: b.text,
+      x: b.x,
+      y: b.y,
+      width: b.width,
+      height: b.height,
+      confidence: b.confidence ?? null,
+      region_type: b.style?.regionType ?? "unknown",
+      style: b.style ?? {},
+      status: "detected",
     }));
     if (blocks.length) {
       const { error: blockError } = await supabase.from("text_blocks").upsert(blocks, { onConflict: "page_id,block_key" });
@@ -139,13 +149,23 @@ export async function POST(
     }).eq("id", id);
 
     const { data: storedBlocks } = await supabase.from("text_blocks")
-      .select("id,source_text,x,y,width,height,confidence,status,translated_text")
+      .select("id,source_text,x,y,width,height,confidence,status,translated_text,region_type,style")
       .eq("page_id", page.id).order("created_at", { ascending: true });
 
     const provider = getVisionProvider();
+    const pageContext = (storedBlocks ?? [])
+      .map((block) => block.source_text)
+      .filter(Boolean)
+      .join(" | ")
+      .slice(0, 5000);
+
     for (const block of storedBlocks ?? []) {
       if (block.status === "translated" && block.translated_text) continue;
-      const translated = await provider.translate(block.source_text);
+      const translated = await provider.translate(
+        block.source_text,
+        `Manga page context: ${pageContext}
+Region type: ${block.region_type ?? "unknown"}`,
+      );
       const { error: updateError } = await supabase.from("text_blocks").update({
         translated_text: translated, status: "translated",
       }).eq("id", block.id);
@@ -153,14 +173,14 @@ export async function POST(
     }
 
     const { data: translatedBlocks } = await supabase.from("text_blocks")
-      .select("id,source_text,translated_text,x,y,width,height,confidence")
+      .select("id,source_text,translated_text,x,y,width,height,confidence,region_type,style")
       .eq("page_id", page.id).eq("status", "translated");
 
     await supabase.from("manga_pages").update({ status: "rendering" }).eq("id", page.id);
     const rendered = await renderTranslatedPage(
       new Uint8Array(await image.arrayBuffer()),
       (translatedBlocks ?? []).map((b) => ({
-        ...b, text: b.source_text, translatedText: b.translated_text ?? "",
+        ...b, text: b.source_text, translatedText: b.translated_text ?? "", style: b.style ?? { regionType: b.region_type ?? "unknown" },
       })),
     );
 
