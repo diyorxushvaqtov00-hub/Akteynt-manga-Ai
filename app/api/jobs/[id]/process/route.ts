@@ -123,6 +123,7 @@ export async function POST(
     if (!image) throw new Error("Page image yuklanmadi.");
 
     await supabase.from("manga_pages").update({ status: "analyzing" }).eq("id", page.id);
+    // Detection is the first strict pipeline stage after extraction.
     const vision = await getVisionProvider().detectText(new Uint8Array(await image.arrayBuffer()));
 
     const blocks = vision.blocks.map((b) => ({
@@ -197,6 +198,7 @@ export async function POST(
       .eq("page_id", page.id).eq("status", "translated");
 
     await supabase.from("manga_pages").update({ status: "rendering" }).eq("id", page.id);
+    // renderTranslatedPage contains CLEAN_QA and VISUAL_QA blocking gates.
     const rendered = await renderTranslatedPage(
       new Uint8Array(await image.arrayBuffer()),
       (translatedBlocks ?? []).map((b) => ({
@@ -237,7 +239,7 @@ export async function POST(
       images.push(new Uint8Array(await img.arrayBuffer()));
     }
 
-    const outputPdf = await assemblePngsToPdf(images);
+    const outputPdf = await assemblePngsToPdf(images, { title: job.filename + " — Uzbek", subject: "Akteynt Manga AI translated chapter" });
     const outputPdfPath = "jobs/" + id + "/output/translated-uz.pdf";
     const { error: pdfError } = await supabase.storage.from(BUCKET).upload(outputPdfPath, outputPdf, {
       contentType: "application/pdf", upsert: true,
