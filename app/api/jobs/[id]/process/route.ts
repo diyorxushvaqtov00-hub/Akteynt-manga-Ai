@@ -145,6 +145,8 @@ export async function POST(
       if (blockError) throw blockError;
     }
 
+    await supabase.from("manga_pages").update({ stage: "DETECTED" }).eq("id", page.id);
+    await supabase.from("manga_pages").update({ stage: "OCR_DONE" }).eq("id", page.id);
     await supabase.from("manga_pages").update({ stage: "ANALYZED" }).eq("id", page.id);
 
     await supabase.from("translation_jobs").update({
@@ -157,8 +159,6 @@ export async function POST(
       .eq("page_id", page.id).order("created_at", { ascending: true });
 
     const provider = getVisionProvider();
-    await supabase.from("manga_pages").update({ stage: "DETECTED" }).eq("id", page.id);
-    await supabase.from("manga_pages").update({ stage: "OCR_DONE" }).eq("id", page.id);
     const pageContext = (storedBlocks ?? [])
       .map((block, index) => {
         const style = (block.style ?? {}) as Record<string, unknown>;
