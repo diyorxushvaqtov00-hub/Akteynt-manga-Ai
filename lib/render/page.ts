@@ -2,6 +2,7 @@ import sharp from "sharp";
 import type { TextBlock } from "../ai/types";
 import { layoutText, anchorForAlign } from "./text-layout";
 import { cleanTextRegions } from "./clean-background";
+import { cleanComplexBackgroundWithAI } from "./ai-inpaint";
 
 export interface RenderBlock extends TextBlock {
   translatedText: string;
@@ -30,7 +31,22 @@ export async function renderTranslatedPage(
   image: Uint8Array,
   blocks: RenderBlock[],
 ): Promise<Uint8Array> {
-  const cleaned = await cleanTextRegions(image, blocks);
+  let cleaned = image;
+  const complexBlocks = blocks.filter((block) => {
+    const mode = block.style?.backgroundMode ?? "complex";
+    return mode === "complex" || ["sfx", "background", "sign"].includes(block.style?.regionType ?? "");
+  });
+
+  if (complexBlocks.length) {
+    try {
+      cleaned = await cleanComplexBackgroundWithAI(cleaned, complexBlocks);
+    } catch {
+      // Deterministic local renderer remains the safe fallback when image editing
+      // is unavailable, rate-limited, or times out.
+    }
+  }
+
+  cleaned = await cleanTextRegions(cleaned, blocks);
   const base = sharp(cleaned);
   const meta = await base.metadata();
   const width = meta.width ?? 1;
