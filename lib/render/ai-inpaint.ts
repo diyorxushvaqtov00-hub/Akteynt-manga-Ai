@@ -10,7 +10,7 @@ function blockDescription(block: TextBlock) {
 }
 
 export async function cleanComplexBackgroundWithAI(image: Uint8Array, blocks: TextBlock[]): Promise<Uint8Array> {
-  if (process.env.AI_INPAINT_ENABLED === 'false') return image;
+  if (process.env.AI_INPAINT_ENABLED === 'false') throw new Error('Murakkab artwork matnini xavfsiz tozalash uchun AI inpainting yoqilgan bo‘lishi kerak.');
   const complex = blocks.filter(block => {
     const mode = block.style?.backgroundMode ?? 'complex';
     return mode === 'complex' || ['sfx','background','sign'].includes(block.style?.regionType ?? '');
