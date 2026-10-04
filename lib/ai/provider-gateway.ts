@@ -38,8 +38,8 @@ const visionSchema = z.object({
   })),
 });
 
-const MODEL = process.env.AI_VISION_MODEL || "google/gemini-3.5-flash";
-const FALLBACK_MODELS = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
+const MODEL = process.env.AI_VISION_MODEL || "google/gemini-3.8-flash";
+const FALLBACK_MODELS = ["google/gemini-3.7-flash", "google/gemini-3.5-flash", "google/gemini-2.5-flash"];
 
 function normalizeColor(value: unknown, fallback: string) {
   if (typeof value !== "string") return fallback;
