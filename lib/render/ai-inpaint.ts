@@ -6,7 +6,7 @@ const MODEL = process.env.AI_INPAINT_MODEL || "google/gemini-3.1-flash-image";
 
 function blockDescription(block: TextBlock) {
   const s = block.style ?? {};
-  return `(${Math.round(block.x)},${Math.round(block.y)},${Math.round(block.width)}x${Math.round(block.height)}) type=${s.regionType ?? "unknown"}`;
+  return `(${Math.round(block.x)},${Math.round(block.y)},${Math.round(block.width)}x${Math.round(block.height)}) type=${s.regionType ?? "unknown"} text="${block.text.slice(0, 120)}"`;
 }
 
 /**
