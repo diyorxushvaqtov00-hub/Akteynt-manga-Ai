@@ -35,5 +35,5 @@ export async function validateRenderedPage(image:Uint8Array, blocks:TextBlock[])
 }
 
 export function assertCleaningSafe(result:CleaningResult){
-  if(!result.safe||!result.image?.byteLength) throw new Error("CLEAN_QA_FAILED: original lettering cleaning is not verified; typesetting blocked.");
+  if(!result.safe||!result.image?.byteLength) throw new Error("CLEAN_QA_FAILED: " + (result.errors?.join(" | ") || "original lettering cleaning is not verified") + "; typesetting blocked.");
 }
