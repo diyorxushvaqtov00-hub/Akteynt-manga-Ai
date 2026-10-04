@@ -1,91 +1,57 @@
 import type { TextAlign, TextDirection } from "../ai/types";
 
 export interface TextLayoutInput {
-  text: string;
-  boxWidth: number;
-  boxHeight: number;
-  preferredFontSize?: number;
-  direction?: TextDirection;
+  text:string; boxWidth:number; boxHeight:number; preferredFontSize?:number;
+  direction?:TextDirection; role?:string; fontWeight?:number;
 }
+export interface TextLayout {fontSize:number;lines:string[];lineHeight:number;direction:TextDirection;}
 
-export interface TextLayout {
-  fontSize: number;
-  lines: string[];
-  lineHeight: number;
-  direction: TextDirection;
+function widthOf(text:string,size:number){
+  return [...text].reduce((n,ch)=>{
+    if(/[\u4e00-\u9fff\u3040-\u30ff]/.test(ch)) return n+size;
+    if(/[A-ZА-ЯЁ0-9]/.test(ch)) return n+size*.60;
+    if(/[.,!?;:'"‘’“”]/.test(ch)) return n+size*.28;
+    return n+size*.52;
+  },0);
 }
-
-export function layoutText(input: TextLayoutInput): TextLayout {
-  const text = input.text.trim();
-  const direction = input.direction ?? "horizontal";
-  if (!text) return { fontSize: 18, lines: [], lineHeight: 22, direction };
-
-  const boxWidth = Math.max(20, input.boxWidth);
-  const boxHeight = Math.max(20, input.boxHeight);
-  const preferred = Math.max(10, Math.min(72, input.preferredFontSize ?? 28));
-
-  let fontSize = preferred;
-  let lines = wrapText(text, boxWidth, fontSize);
-  const maxHeight = boxHeight * 0.88;
-
-  while (fontSize > 9 && lines.length * fontSize * 1.18 > maxHeight) {
-    fontSize -= 1;
-    lines = wrapText(text, boxWidth, fontSize);
-  }
-
-  while (fontSize > 9 && lines.some((line) => estimateWidth(line, fontSize) > boxWidth * 0.92)) {
-    fontSize -= 1;
-    lines = wrapText(text, boxWidth, fontSize);
-  }
-
-  const lineHeight = Math.max(11, Math.min(boxHeight, Math.round(fontSize * 1.18)));
-  return { fontSize, lines, lineHeight, direction };
-}
-
-function estimateWidth(text: string, fontSize: number) {
-  return [...text].reduce((sum, ch) => sum + (/[\u4e00-\u9fff\u3040-\u30ff]/.test(ch) ? fontSize : fontSize * 0.52), 0);
-}
-
-function wrapText(text: string, boxWidth: number, fontSize: number) {
-  const maxChars = Math.max(2, Math.floor(boxWidth / Math.max(5, fontSize * 0.52)));
-  const paragraphs = text.split(/\n+/);
-  const lines: string[] = [];
-
-  for (const paragraph of paragraphs) {
-    const words = paragraph.split(/\s+/).filter(Boolean);
-    if (!words.length) {
-      lines.push("");
-      continue;
-    }
-
-    let current = "";
-    for (const word of words) {
-      const candidate = current ? `${current} ${word}` : word;
-      if (current && (candidate.length > maxChars || estimateWidth(candidate, fontSize) > boxWidth * 0.92)) {
-        lines.push(current);
-        current = word;
-      } else if (!current && estimateWidth(word, fontSize) > boxWidth * 0.92) {
-        let chunk = "";
-        for (const char of [...word]) {
-          const next = chunk + char;
-          if (estimateWidth(next, fontSize) > boxWidth * 0.92 && chunk) {
-            lines.push(chunk);
-            chunk = char;
-          } else {
-            chunk = next;
-          }
+function wrap(text:string,w:number,size:number){
+  const out:string[]=[];
+  for(const p of text.split(/\n+/)){
+    const words=p.trim().split(/\s+/).filter(Boolean);
+    if(!words.length){out.push("");continue;}
+    let line="";
+    for(const word of words){
+      const candidate=line?line+" "+word:word;
+      if(line && widthOf(candidate,size)>w*.9){out.push(line);line=word;}
+      else if(!line && widthOf(word,size)>w*.9){
+        let chunk="";
+        for(const ch of [...word]){
+          if(chunk&&widthOf(chunk+ch,size)>w*.9){out.push(chunk);chunk=ch;} else chunk+=ch;
         }
-        current = chunk;
-      } else {
-        current = candidate;
-      }
+        line=chunk;
+      } else line=candidate;
     }
-    if (current) lines.push(current);
+    if(line)out.push(line);
   }
-
-  return lines;
+  return out;
 }
-
-export function anchorForAlign(align: TextAlign) {
-  return align === "left" ? "start" : align === "right" ? "end" : "middle";
+export function layoutText(input:TextLayoutInput):TextLayout{
+  const text=input.text.trim(), direction=input.direction??"horizontal";
+  if(!text)return {fontSize:18,lines:[],lineHeight:22,direction};
+  const w=Math.max(20,input.boxWidth),h=Math.max(20,input.boxHeight);
+  const role=(input.role??"dialogue").toLowerCase();
+  const preferred=Math.max(8,Math.min(96,input.preferredFontSize??(
+    role==="sfx"?Math.min(48,Math.max(18,w*.12)):
+    role==="shout"?Math.min(40,Math.max(16,w*.085)):
+    role==="whisper"?Math.min(24,Math.max(10,w*.055)):
+    Math.min(32,Math.max(12,w*.065))
+  )));
+  let size=preferred,lines=wrap(text,w,size);
+  const maxH=h*.84;
+  while(size>8 && (lines.length*size*(role==="sfx"?1.0:1.16)>maxH || lines.some(x=>widthOf(x,size)>w*.9))){
+    size-=1; lines=wrap(text,w,size);
+  }
+  const lineHeight=Math.max(10,Math.round(size*(role==="sfx"?1.0:1.16)));
+  return {fontSize:size,lines,lineHeight,direction};
 }
+export function anchorForAlign(align:TextAlign){return align==="left"?"start":align==="right"?"end":"middle";}
