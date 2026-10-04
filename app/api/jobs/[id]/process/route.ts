@@ -198,6 +198,7 @@ export async function POST(
       if (updateError) throw updateError;
     }
 
+    await supabase.from("manga_pages").update({ stage: "TRANSLATED" }).eq("id", page.id);
     const { data: translatedBlocks } = await supabase.from("text_blocks")
       .select("id,source_text,translated_text,x,y,width,height,confidence,region_type,style")
       .eq("page_id", page.id).eq("status", "translated");
