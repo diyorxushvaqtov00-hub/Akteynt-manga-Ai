@@ -30,7 +30,7 @@ export async function POST(
   try {
     const [{ data: image }, { data: blocks }] = await Promise.all([
       supabase.storage.from(BUCKET).download(page.original_image_path),
-      supabase.from("text_blocks").select("id,source_text,translated_text,x,y,width,height,confidence")
+      supabase.from("text_blocks").select("id,source_text,translated_text,x,y,width,height,confidence,region_type,style")
         .eq("page_id", page.id).eq("status", "translated"),
     ]);
 
@@ -44,6 +44,7 @@ export async function POST(
         id: block.id,
         text: block.source_text,
         translatedText: block.translated_text ?? "",
+        style: block.style ?? { regionType: block.region_type ?? "unknown" },
       })),
     );
 
