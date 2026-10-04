@@ -1,8 +1,7 @@
 import sharp from 'sharp';
 import type { TextBlock } from '../ai/types';
 import { layoutText, anchorForAlign } from './text-layout';
-import { cleanTextRegions } from './clean-background';
-import { cleanComplexBackgroundWithAI } from './ai-inpaint';
+import { cleanPage } from './cleaning-router';
 
 export interface RenderBlock extends TextBlock { translatedText: string; }
 function esc(value: string) { return value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;'); }
@@ -19,15 +18,9 @@ function fontFamily(category?: string, role?: string) {
 }
 
 export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBlock[]): Promise<Uint8Array> {
-  let cleaned = image;
-  const complexBlocks = blocks.filter(block => {
-    const mode = block.style?.backgroundMode ?? 'complex';
-    return mode === 'complex' || ['sfx','background','sign'].includes(block.style?.regionType ?? '');
-  });
-
-  // Safety rule: never silently render translation on top of uncleared original artwork.
-  if (complexBlocks.length) cleaned = await cleanComplexBackgroundWithAI(cleaned, complexBlocks);
-  cleaned = await cleanTextRegions(cleaned, blocks);
+  const cleaning = await cleanPage(image, blocks);
+  if (!cleaning.safe) throw new Error('Cleaning QA: sahifa xavfsiz tozalanmadi; typesetting to‘xtatildi.');
+  const cleaned = cleaning.image;
 
   const base = sharp(cleaned);
   const meta = await base.metadata();
