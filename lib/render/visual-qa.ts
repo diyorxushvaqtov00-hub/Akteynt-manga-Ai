@@ -31,7 +31,8 @@ export async function validateRenderedPage(image:Uint8Array, blocks:TextBlock[])
     if(!readable) errors.push("Block "+b.id+" OCR confidence/readability gate failed.");
     return {blockId:b.id,coverage,contrast:1,readable,insideBounds};
   });
-  return {safe:errors.length===0,metrics,errors};
+  const hasBadMetric=metrics.some(m=>!m.insideBounds||!m.readable);
+  return {safe:errors.length===0&&!hasBadMetric,metrics,errors};
 }
 
 export function assertCleaningSafe(result:CleaningResult){
