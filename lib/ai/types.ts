@@ -1,6 +1,6 @@
 export type TextRegionType =
   | 'speech' | 'thought' | 'narration' | 'caption' | 'sfx'
-  | 'sign' | 'background' | 'unknown';
+  | 'sign' | 'background' | 'phone' | 'screen' | 'handwritten' | 'unknown';
 
 export type TextAlign = 'left' | 'center' | 'right';
 export type TextDirection = 'horizontal' | 'vertical';
@@ -22,7 +22,15 @@ export interface TextStyle {
   backgroundMode?: 'solid' | 'transparent' | 'complex';
   speaker?: string;
   readingOrder?: number;
-  visualRole?: 'dialogue' | 'monologue' | 'narration' | 'sfx' | 'environment';
+  visualRole?: 'dialogue' | 'monologue' | 'narration' | 'shout' | 'whisper' | 'emphasis' | 'sfx' | 'environment';
+  confidence?: number;
+  fontFamilyGuess?: string;
+  sizeRatio?: number;
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  backgroundMode?: 'solid' | 'transparent' | 'complex';
+  preserveArtwork?: boolean;
   preserveArtwork?: boolean;
 }
 
