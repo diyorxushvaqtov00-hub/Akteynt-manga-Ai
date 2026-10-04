@@ -56,6 +56,8 @@ export async function POST(
       width: block.width,
       height: block.height,
       confidence: block.confidence ?? null,
+      region_type: block.style?.regionType ?? "unknown",
+      style: block.style ?? {},
       status: "detected",
     }));
 
