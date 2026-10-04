@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       translated.push({ ...block, translated_text: text, status: 'translated' });
     }
 
-    await supabase.from('manga_pages').update({ status: 'processing', stage: 'TRANSLATED', error: null }).eq('id', page.id);
+    await supabase.from('manga_pages').update({ status: 'pending', stage: 'TRANSLATED', error: null }).eq('id', page.id);
     return NextResponse.json({ ok: true, jobId: id, pageNumber, status: 'translated_text_ready', stage: 'TRANSLATED', blocks: translated });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Tarjima xatosi.';
