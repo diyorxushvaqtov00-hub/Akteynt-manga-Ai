@@ -16,6 +16,7 @@ export interface CleaningResult {
   decisions: CleaningDecision[];
   aiUsed: boolean;
   safe: boolean;
+  errors?: string[];
 }
 
 export interface CleaningProvider {
