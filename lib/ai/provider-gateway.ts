@@ -66,7 +66,7 @@ export class GatewayVisionProvider implements VisionProvider {
         speaker: block.style?.speaker, readingOrder: block.style?.readingOrder ?? index,
         visualRole: block.style?.visualRole ?? (block.style?.regionType === 'sfx' ? 'sfx' : block.style?.regionType === 'narration' || block.style?.regionType === 'caption' ? 'narration' : block.style?.regionType === 'background' || block.style?.regionType === 'sign' ? 'environment' : 'dialogue'),
         preserveArtwork: true
-      } satisfies TextStyle) }))
+      } satisfies TextStyle }))
     };
   }
 
