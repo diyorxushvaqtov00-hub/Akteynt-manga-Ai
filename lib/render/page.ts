@@ -45,7 +45,7 @@ export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBloc
     const strokeWidth = style.strokeWidth ?? ((role === 'sfx' || role === 'shout' || role === 'emphasis') ? Math.max(1, Math.min(7, Math.round(fontSize / 7))) : 0);
     const weight = style.fontWeight ?? (role === 'sfx' || role === 'shout' || role === 'emphasis' ? 900 : role === 'whisper' ? 400 : 700);
     const italic = style.fontStyle === 'italic' || role === 'whisper' || role === 'monologue' ? 'italic' : 'normal';
-    const family = fontFamily(style.fontFamily, role);
+    const family = fontFamily(style.fontFamily ?? style.fontFamilyGuess, role);
     const rotate = style.rotation ?? 0;
 
     if (layout.direction === 'vertical') {
