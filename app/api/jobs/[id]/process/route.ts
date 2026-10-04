@@ -154,20 +154,40 @@ export async function POST(
 
     const provider = getVisionProvider();
     const pageContext = (storedBlocks ?? [])
-      .map((block) => block.source_text)
-      .filter(Boolean)
-      .join(" | ")
+      .map((block, index) => {
+        const style = (block.style ?? {}) as Record<string, unknown>;
+        return "[" + (Number(style.readingOrder ?? index) + 1) + "] type=" +
+          (block.region_type ?? "unknown") + " speaker=" + (style.speaker ?? "unknown") +
+          " source=" + block.source_text + " translation=" + (block.translated_text ?? "");
+      })
+      .join("\n")
+      .slice(0, 9000);
+
+    const { data: chapterMemory } = await supabase.from("text_blocks")
+      .select("source_text,translated_text,region_type")
+      .eq("status", "translated")
+      .neq("page_id", page.id)
+      .order("created_at", { ascending: false })
+      .limit(40);
+
+    const terminology = (chapterMemory ?? [])
+      .map((block) => block.source_text + " -> " + (block.translated_text ?? ""))
+      .join("\n")
       .slice(0, 5000);
 
     for (const block of storedBlocks ?? []) {
       if (block.status === "translated" && block.translated_text) continue;
-      const translated = await provider.translate(
-        block.source_text,
-        `Manga page context: ${pageContext}
-Region type: ${block.region_type ?? "unknown"}`,
-      );
+      const style = (block.style ?? {}) as Record<string, unknown>;
+      const context =
+        "Chapter terminology memory:\n" + terminology +
+        "\n\nCurrent page reading order:\n" + pageContext +
+        "\n\nRegion: " + (block.region_type ?? "unknown") +
+        "\nSpeaker: " + (style.speaker ?? "unknown") +
+        "\nVisual role: " + (style.visualRole ?? "unknown");
+
+      const translated = await provider.translate(block.source_text, context);
       const { error: updateError } = await supabase.from("text_blocks").update({
-        translated_text: translated, status: "translated",
+        translated_text: translated, translation_context: context, status: "translated",
       }).eq("id", block.id);
       if (updateError) throw updateError;
     }
