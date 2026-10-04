@@ -21,7 +21,7 @@ const visionSchema = z.object({
       bubbleShape: z.enum(['none','round','ellipse','rectangle','irregular']).optional(),
       backgroundColor: z.string().optional(), backgroundMode: z.enum(['solid','transparent','complex']).optional(),
       speaker: z.string().optional(), readingOrder: z.number().int().nonnegative().optional(),
-      visualRole: z.enum(['dialogue','monologue','narration','sfx','environment']).optional(), preserveArtwork: z.boolean().optional()
+      visualRole: z.enum(['dialogue','monologue','narration','shout','whisper','emphasis','sfx','environment']).optional(), confidence: z.number().min(0).max(1).optional(), fontFamilyGuess: z.string().optional(), sizeRatio: z.number().positive().optional(), preserveArtwork: z.boolean().optional()
     }).optional()
   }))
 });
@@ -65,6 +65,9 @@ export class GatewayVisionProvider implements VisionProvider {
         backgroundColor: normalizeColor(block.style?.backgroundColor, '#ffffff'), backgroundMode: block.style?.backgroundMode ?? 'complex',
         speaker: block.style?.speaker, readingOrder: block.style?.readingOrder ?? index,
         visualRole: block.style?.visualRole ?? (block.style?.regionType === 'sfx' ? 'sfx' : block.style?.regionType === 'narration' || block.style?.regionType === 'caption' ? 'narration' : block.style?.regionType === 'background' || block.style?.regionType === 'sign' ? 'environment' : 'dialogue'),
+        confidence: block.style?.confidence ?? block.confidence,
+        fontFamilyGuess: block.style?.fontFamilyGuess,
+        sizeRatio: block.style?.sizeRatio,
         preserveArtwork: true
       } satisfies TextStyle }))
     };
