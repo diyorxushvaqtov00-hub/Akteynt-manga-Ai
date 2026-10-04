@@ -31,7 +31,7 @@ export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBloc
 
   for (const block of blocks) {
     const text = block.translatedText.trim(); if (!text) continue;
-    const style: TextBlock["style"] = block.style;
+    const style: NonNullable<TextBlock["style"]> = block.style ?? { regionType: "unknown" };
     const role = style.visualRole ?? (style.regionType === 'sfx' ? 'sfx' : style.regionType === 'narration' || style.regionType === 'caption' ? 'narration' : 'dialogue');
     const layout = layoutText({ text, boxWidth: block.width, boxHeight: block.height, preferredFontSize: style.fontSize, direction: style.direction, role });
     const fontSize = layout.fontSize, lineHeight = layout.lineHeight;
