@@ -2,6 +2,7 @@ import type { TextBlock } from "../ai/types";
 import { cleanTextRegions } from "./clean-background";
 import { cleanComplexBackgroundWithAI } from "./ai-inpaint";
 import type { CleaningDecision, CleaningResult } from "./cleaning-types";
+import { verifyCleaning } from "./cleaning-qa";
 
 function mode(b:TextBlock){return b.style?.backgroundMode??"complex";}
 function bubble(b:TextBlock){return ["speech","thought","narration","caption"].includes(b.style?.regionType??"")&&mode(b)==="solid";}
@@ -26,5 +27,6 @@ export async function cleanPage(image:Uint8Array, blocks:TextBlock[]):Promise<Cl
     cleaned=await cleanComplexBackgroundWithAI(cleaned,complexBlocks);
   }
   if(!cleaned.byteLength) throw new Error("Cleaning produced an empty image.");
-  return {image:cleaned,decisions,aiUsed:complexBlocks.length>0,safe:true};
+  const qa = await verifyCleaning(image, cleaned, blocks);
+  return {image:cleaned,decisions,aiUsed:complexBlocks.length>0,safe:qa.safe};
 }
