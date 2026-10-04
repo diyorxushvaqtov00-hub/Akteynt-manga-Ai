@@ -31,7 +31,7 @@ export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBloc
     const text = block.translatedText.trim(); if (!text) continue;
     const style = block.style ?? {};
     const role = style.visualRole ?? (style.regionType === 'sfx' ? 'sfx' : style.regionType === 'narration' || style.regionType === 'caption' ? 'narration' : 'dialogue');
-    const layout = layoutText({ text, boxWidth: block.width, boxHeight: block.height, preferredFontSize: style.fontSize, direction: style.direction });
+    const layout = layoutText({ text, boxWidth: block.width, boxHeight: block.height, preferredFontSize: style.fontSize, direction: style.direction, role });
     const fontSize = layout.fontSize, lineHeight = layout.lineHeight;
     const align = style.align ?? 'center', anchor = anchorForAlign(align);
     const margin = Math.max(4, Math.round(Math.min(block.width, block.height) * 0.06));
@@ -40,9 +40,9 @@ export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBloc
     const firstY = block.y + Math.max(fontSize, (block.height - totalHeight) / 2 + fontSize);
     const fill = style.fillColor ?? '#111111';
     const stroke = style.strokeColor ?? (fill.toLowerCase() === '#ffffff' ? '#111111' : '#ffffff');
-    const strokeWidth = style.strokeWidth ?? (role === 'sfx' ? Math.max(1, Math.min(7, Math.round(fontSize / 7))) : 0);
-    const weight = style.fontWeight ?? (role === 'sfx' ? 900 : 700);
-    const italic = style.fontStyle === 'italic' ? 'italic' : 'normal';
+    const strokeWidth = style.strokeWidth ?? ((role === 'sfx' || role === 'shout' || role === 'emphasis') ? Math.max(1, Math.min(7, Math.round(fontSize / 7))) : 0);
+    const weight = style.fontWeight ?? (role === 'sfx' || role === 'shout' || role === 'emphasis' ? 900 : role === 'whisper' ? 400 : 700);
+    const italic = style.fontStyle === 'italic' || role === 'whisper' || role === 'monologue' ? 'italic' : 'normal';
     const family = fontFamily(style.fontFamily, role);
     const rotate = style.rotation ?? 0;
 
