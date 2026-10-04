@@ -6,7 +6,7 @@ import { verifyCleaning } from "./cleaning-qa";
 
 function mode(b:TextBlock){return b.style?.backgroundMode??"complex";}
 function bubble(b:TextBlock){return ["speech","thought","narration","caption"].includes(b.style?.regionType??"")&&mode(b)==="solid";}
-function complex(b:TextBlock){return mode(b)==="complex"||["sfx","background","sign"].includes(b.style?.regionType??"");}
+function complex(b:TextBlock){return mode(b)!=="solid";}
 
 async function localInpaint(image:Uint8Array, blocks:TextBlock[]):Promise<Uint8Array>{
   // Conservative local fallback: only use the deterministic bubble cleaner here.
