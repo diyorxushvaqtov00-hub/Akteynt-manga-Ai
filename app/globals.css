@@ -1,2 +1,2 @@
 @import "tailwindcss";
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07060b;color:#f5f3ff;font-family:Arial,Helvetica,sans-serif}button,input{font:inherit}
+:root{color-scheme:dark}*{box-sizing:border-box}html{background:#08070d}body{margin:0;background:#08070d;color:#f5f3ff;font-family:Arial,Helvetica,sans-serif}button,input{font:inherit}::selection{background:rgba(139,92,246,.35);color:white}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:#08070d}::-webkit-scrollbar-thumb{background:#272231;border-radius:999px}::-webkit-scrollbar-thumb:hover{background:#3a304a}
