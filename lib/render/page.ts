@@ -9,17 +9,20 @@ function esc(value: string) { return value.replaceAll('&','&amp;').replaceAll('<
 
 function fontFamily(category?: string, role?: string) {
   const raw = (category ?? "").toLowerCase().replace(/['"]/g, "");
-  if (role === "sfx" || /impact|display|bold|black|condensed/.test(raw)) {
-    return raw.includes("condensed") ? "'Arial Narrow', 'DejaVu Sans', sans-serif" : "'DejaVu Sans', Arial, sans-serif";
-  }
-  if (role === "narration" || /serif|times|georgia|roman/.test(raw)) {
+  if (/times|georgia|garamond|serif|roman/.test(raw) || role === "narration") {
     return "'DejaVu Serif', Georgia, 'Times New Roman', serif";
   }
-  if (role === "thought" || role === "monologue" || /hand|comic|script|rounded|casual/.test(raw)) {
-    return "'DejaVu Sans', 'Comic Sans MS', sans-serif";
+  if (/impact|anton|bebas|display|black/.test(raw) || role === "sfx" || role === "shout") {
+    return "'DejaVu Sans', Impact, 'Arial Black', sans-serif";
   }
-  if (role === "whisper" || role === "environment" || /italic|light|thin/.test(raw)) {
-    return "'DejaVu Sans', Arial, sans-serif";
+  if (/condensed|narrow/.test(raw)) {
+    return "'DejaVu Sans Condensed', 'Arial Narrow', Arial, sans-serif";
+  }
+  if (/hand|comic|script|rounded|casual/.test(raw) || role === "thought" || role === "monologue") {
+    return "'DejaVu Sans', 'Comic Sans MS', cursive";
+  }
+  if (/mono|typewriter/.test(raw)) {
+    return "'DejaVu Sans Mono', monospace";
   }
   return "'DejaVu Sans', Arial, sans-serif";
 }
