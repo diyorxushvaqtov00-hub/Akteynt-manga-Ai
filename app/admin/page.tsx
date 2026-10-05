@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { Activity, BarChart3, BookOpen, CheckCircle2, ChevronDown, Clock3, Database, FileText, LayoutDashboard, Menu, MoreHorizontal, Search, Settings, ShieldCheck, Sparkles, UploadCloud, Users, Zap, AlertTriangle, Cpu, HardDrive } from "lucide-react";
 
@@ -62,15 +63,15 @@ export default async function AdminDashboard() {
 
         <section className="min-w-0 flex-1">
           <header className="flex h-[70px] items-center gap-4 border-b border-white/[.06] px-5 md:px-8">
-            <button className="rounded-lg p-2 text-zinc-500 lg:hidden"><Menu size={20}/></button>
+            <details className="relative lg:hidden"><summary className="list-none cursor-pointer rounded-lg p-2 text-zinc-500"><Menu size={20}/></summary><div className="absolute left-0 top-12 z-50 w-56 rounded-2xl border border-white/10 bg-[#0c0b12] p-2 shadow-2xl"><Link className="block rounded-xl px-3 py-2 text-xs text-zinc-300 hover:bg-white/5" href="/admin">Dashboard</Link><Link className="block rounded-xl px-3 py-2 text-xs text-zinc-300 hover:bg-white/5" href="/admin/manga">Manga</Link><Link className="block rounded-xl px-3 py-2 text-xs text-zinc-300 hover:bg-white/5" href="/admin/chapters">Chapters</Link><Link className="block rounded-xl px-3 py-2 text-xs text-zinc-300 hover:bg-white/5" href="/admin/translation">AI Translation</Link><Link className="block rounded-xl px-3 py-2 text-xs text-zinc-300 hover:bg-white/5" href="/admin/jobs">Processing Jobs</Link><Link className="block rounded-xl px-3 py-2 text-xs text-zinc-300 hover:bg-white/5" href="/admin/system-health">System Health</Link></div></details>
             <div className="relative hidden max-w-md flex-1 md:block"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" size={16}/><input placeholder="Search manga, chapters, users..." className="h-10 w-full rounded-xl border border-white/[.07] bg-white/[.025] pl-10 pr-4 text-xs outline-none placeholder:text-zinc-700 focus:border-violet-500/30"/></div>
-            <div className="ml-auto flex items-center gap-3"><div className="hidden items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/5 px-3 py-1.5 text-[10px] text-emerald-300 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"/> All systems operational</div><button className="relative rounded-xl border border-white/[.07] bg-white/[.025] p-2.5 text-zinc-500"><Activity size={17}/><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-violet-400"/></button></div>
+            <div className="ml-auto flex items-center gap-3"><div className="hidden items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/5 px-3 py-1.5 text-[10px] text-emerald-300 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"/> All systems operational</div><Link href="/admin/system-health" aria-label="System Health" className="relative rounded-xl border border-white/[.07] bg-white/[.025] p-2.5 text-zinc-500 hover:text-white"><Activity size={17}/><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-violet-400"/></Link></div>
           </header>
 
           <div className="mx-auto max-w-[1500px] space-y-6 p-5 md:p-8">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
               <div><div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-violet-400"><span className="h-px w-5 bg-violet-500"/> Admin Console</div><h1 className="text-3xl font-black tracking-tight md:text-4xl">Good morning, Diyor.</h1><p className="mt-1 text-sm text-zinc-500">Monitor your manga localization platform.</p></div>
-              <button className="flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-xs font-bold text-white shadow-[0_8px_30px_rgba(139,92,246,.18)] hover:bg-violet-400"><UploadCloud size={15}/> New project</button>
+              <Link href="/" className="flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-xs font-bold text-white shadow-[0_8px_30px_rgba(139,92,246,.18)] hover:bg-violet-400"><UploadCloud size={15}/> New project</Link>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -87,13 +88,13 @@ export default async function AdminDashboard() {
                 </section>
 
                 <section className="overflow-hidden rounded-2xl border border-white/[.07] bg-[#0c0b12]">
-                  <div className="flex items-center justify-between border-b border-white/[.06] p-5"><div><h2 className="text-sm font-bold">Recent Projects</h2><p className="mt-1 text-[11px] text-zinc-600">Latest manga localization activity</p></div><button className="flex items-center gap-1 text-[10px] text-zinc-500">View all <ChevronDown size={12}/></button></div>
+                  <div className="flex items-center justify-between border-b border-white/[.06] p-5"><div><h2 className="text-sm font-bold">Recent Projects</h2><p className="mt-1 text-[11px] text-zinc-600">Latest manga localization activity</p></div><Link href="/admin/jobs" className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-white">View all <ChevronDown size={12}/></Link></div>
                   <div className="divide-y divide-white/[.05]">
                     {(jobRows.length ? jobRows.map((j:any)=>({title:j.filename||"Untitled job",chapter:`Stage: ${j.stage}`,cover:(j.filename||"AI").slice(0,2).toUpperCase(),progress:j.progress??0,stage:j.stage,updated:new Date(j.updated_at||j.created_at).toLocaleString("uz-UZ"),tone:"violet"})) : projects).map(p=><div key={p.title} className="grid grid-cols-[minmax(180px,1.5fr)_90px_minmax(120px,1fr)_90px_70px] items-center gap-4 px-5 py-4">
                       <div className="flex items-center gap-3"><div className="grid h-11 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-700/60 to-fuchsia-900/60 text-[9px] font-black ring-1 ring-white/10">{p.cover}</div><div className="min-w-0"><div className="truncate text-xs font-semibold">{p.title}</div><div className="mt-1 text-[10px] text-zinc-600">{p.chapter} · JP → UZ</div></div></div>
                       <div className="text-[10px] text-zinc-500">{p.updated}</div>
                       <div><div className="mb-1.5 flex justify-between text-[9px]"><span className="text-zinc-600">Progress</span><span className="text-zinc-400">{p.progress}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500" style={{width:p.progress+"%"}}/></div></div>
-                      <Status>{p.stage}</Status><button className="justify-self-end text-zinc-600 hover:text-zinc-200"><MoreHorizontal size={17}/></button>
+                      <Status>{p.stage}</Status><Link href="/admin/jobs" aria-label="Open job" className="justify-self-end text-zinc-600 hover:text-zinc-200"><MoreHorizontal size={17}/></Link>
                     </div>)}
                   </div>
                 </section>
@@ -105,7 +106,7 @@ export default async function AdminDashboard() {
               </aside>
             </div>
 
-            <section className="rounded-2xl border border-white/[.07] bg-[#0c0b12] p-5 md:p-6"><div className="flex items-center justify-between"><div><h2 className="text-sm font-bold">AI Processing Usage</h2><p className="mt-1 text-[10px] text-zinc-600">Requests across the last 7 days</p></div><button className="flex items-center gap-2 rounded-lg border border-white/[.07] px-3 py-2 text-[10px] text-zinc-500">Last 7 days <ChevronDown size={12}/></button></div><div className="mt-6 h-36 w-full overflow-hidden rounded-xl bg-gradient-to-b from-violet-500/[.08] to-transparent p-4"><div className="flex h-full items-end gap-2">{[35,52,43,70,58,82,66,92,75,88,69,96,78,100,83,91,72,86,64,94,76,89,68,98].map((h,i)=><div key={i} className="flex-1 rounded-t bg-violet-500/60" style={{height:h+"%"}}/>)}</div></div></section>
+            <section className="rounded-2xl border border-white/[.07] bg-[#0c0b12] p-5 md:p-6"><div className="flex items-center justify-between"><div><h2 className="text-sm font-bold">AI Processing Usage</h2><p className="mt-1 text-[10px] text-zinc-600">Requests across the last 7 days</p></div><Link href="/admin/analytics" className="flex items-center gap-2 rounded-lg border border-white/[.07] px-3 py-2 text-[10px] text-zinc-500 hover:text-white">Open analytics <ChevronDown size={12}/></Link></div><div className="mt-6 h-36 w-full overflow-hidden rounded-xl bg-gradient-to-b from-violet-500/[.08] to-transparent p-4"><div className="flex h-full items-end gap-2">{[35,52,43,70,58,82,66,92,75,88,69,96,78,100,83,91,72,86,64,94,76,89,68,98].map((h,i)=><div key={i} className="flex-1 rounded-t bg-violet-500/60" style={{height:h+"%"}}/>)}</div></div></section>
 
             <footer className="flex flex-col gap-2 border-t border-white/[.05] pt-5 text-[9px] text-zinc-700 sm:flex-row sm:justify-between"><span>Akteynt Manga AI · Admin Console</span><span>AI pipeline v1.0 · Secure environment</span></footer>
           </div>
