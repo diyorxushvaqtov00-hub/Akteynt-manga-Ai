@@ -8,14 +8,28 @@ export interface RenderBlock extends TextBlock { translatedText: string; }
 function esc(value: string) { return value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;'); }
 
 function fontFamily(category?: string, role?: string) {
-  if (role === 'sfx') return "'Arial Black', Impact, sans-serif";
-  switch ((category ?? 'sans').toLowerCase()) {
-    case 'serif': return "Georgia, 'Times New Roman', serif";
-    case 'handwritten': return "'Comic Sans MS', 'Trebuchet MS', cursive";
-    case 'display': return "'Arial Black', Impact, sans-serif";
-    case 'condensed': return "'Arial Narrow', Arial, sans-serif";
-    default: return "'Noto Sans', Arial, sans-serif";
+  const raw = (category ?? "").toLowerCase().replace(/['"]/g, "");
+  if (role === "sfx" || /impact|display|bold|black|condensed/.test(raw)) {
+    return raw.includes("condensed") ? "'Arial Narrow', 'DejaVu Sans', sans-serif" : "'DejaVu Sans', Arial, sans-serif";
   }
+  if (role === "narration" || /serif|times|georgia|roman/.test(raw)) {
+    return "'DejaVu Serif', Georgia, 'Times New Roman', serif";
+  }
+  if (role === "thought" || role === "monologue" || /hand|comic|script|rounded|casual/.test(raw)) {
+    return "'DejaVu Sans', 'Comic Sans MS', sans-serif";
+  }
+  if (role === "whisper" || role === "environment" || /italic|light|thin/.test(raw)) {
+    return "'DejaVu Sans', Arial, sans-serif";
+  }
+  return "'DejaVu Sans', Arial, sans-serif";
+}
+
+function styleFontSize(style: NonNullable<TextBlock["style"]>, block: RenderBlock) {
+  const ratio = Number(style.sizeRatio);
+  if (Number.isFinite(ratio) && ratio > 0 && ratio < 1) {
+    return Math.max(8, Math.min(96, Math.round(Math.min(block.width, block.height) * ratio)));
+  }
+  return style.fontSize;
 }
 
 export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBlock[]): Promise<Uint8Array> {
@@ -33,7 +47,7 @@ export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBloc
     const text = block.translatedText.trim(); if (!text) continue;
     const style: NonNullable<TextBlock["style"]> = block.style ?? { regionType: "unknown" };
     const role = style.visualRole ?? (style.regionType === 'sfx' ? 'sfx' : style.regionType === 'narration' || style.regionType === 'caption' ? 'narration' : 'dialogue');
-    const layout = layoutText({ text, boxWidth: block.width, boxHeight: block.height, preferredFontSize: style.fontSize, direction: style.direction, role });
+    const layout = layoutText({ text, boxWidth: block.width, boxHeight: block.height, preferredFontSize: styleFontSize(style, block), direction: style.direction, role });
     const fontSize = layout.fontSize, lineHeight = layout.lineHeight;
     const align = style.align ?? 'center', anchor = anchorForAlign(align);
     const margin = Math.max(4, Math.round(Math.min(block.width, block.height) * 0.06));
@@ -41,7 +55,7 @@ export async function renderTranslatedPage(image: Uint8Array, blocks: RenderBloc
     const totalHeight = layout.lines.length * lineHeight;
     const firstY = block.y + Math.max(fontSize, (block.height - totalHeight) / 2 + fontSize);
     const fill = style.fillColor ?? '#111111';
-    const stroke = style.strokeColor ?? (fill.toLowerCase() === '#ffffff' ? '#111111' : '#ffffff');
+    const stroke = style.strokeColor ?? (fill.toLowerCase() === "#ffffff" ? "#111111" : "#ffffff");
     const strokeWidth = style.strokeWidth ?? ((role === 'sfx' || role === 'shout' || role === 'emphasis') ? Math.max(1, Math.min(7, Math.round(fontSize / 7))) : 0);
     const weight = style.fontWeight ?? (role === 'sfx' || role === 'shout' || role === 'emphasis' ? 900 : role === 'whisper' ? 400 : 700);
     const italic = style.fontStyle === 'italic' || role === 'whisper' || role === 'monologue' ? 'italic' : 'normal';
