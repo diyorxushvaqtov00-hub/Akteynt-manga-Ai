@@ -48,7 +48,7 @@ export default async function AdminDashboard() {
           <div className="mb-3 px-2 text-[9px] font-bold uppercase tracking-[.2em] text-zinc-600">Workspace</div>
           <nav className="space-y-1">
             {[[LayoutDashboard,"Dashboard",true],[BookOpen,"Manga"],[FileText,"Chapters"],[Zap,"AI Translation"],[Activity,"Processing Jobs"]].map(([Icon,label,active]) => {
-              const I=Icon as typeof LayoutDashboard; return <a key={label as string} href={label === "Manga" ? "/admin/manga" : label === "Processing Jobs" ? "/admin/jobs" : label === "Dashboard" ? "/admin" : "#"} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${active ? "bg-violet-500/10 text-white ring-1 ring-violet-400/10" : "text-zinc-500 hover:bg-white/[.03] hover:text-zinc-200"}`}><I size={17}/><span>{label as string}</span>{label==="Processing Jobs" && <span className="ml-auto rounded-full bg-violet-500/15 px-2 py-0.5 text-[9px] text-violet-300">27</span>}</a>
+              const I=Icon as typeof LayoutDashboard; return <a key={label as string} href={label === "Manga" ? "/admin/manga" : label === "Processing Jobs" ? "/admin/jobs" : label === "Dashboard" ? "/admin" : label === "Analytics" ? "/admin/analytics" : "#"} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${active ? "bg-violet-500/10 text-white ring-1 ring-violet-400/10" : "text-zinc-500 hover:bg-white/[.03] hover:text-zinc-200"}`}><I size={17}/><span>{label as string}</span>{label==="Processing Jobs" && <span className="ml-auto rounded-full bg-violet-500/15 px-2 py-0.5 text-[9px] text-violet-300">27</span>}</a>
             })}
           </nav>
           <div className="mb-3 mt-8 px-2 text-[9px] font-bold uppercase tracking-[.2em] text-zinc-600">System</div>
