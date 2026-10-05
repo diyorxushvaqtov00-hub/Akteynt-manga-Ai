@@ -5,7 +5,7 @@ export const MANGA_VISION_PROMPT = [
   'Transcribe only visible text. Never invent unreadable text.',
   'Return a tight pixel bounding box around the original lettering, not an arbitrary full bubble.',
   'Classify each region as speech, thought, narration, caption, sfx, sign, background or unknown.',
-  'Infer font category, weight/style, fill/stroke colors, stroke width, alignment, direction, rotation, bubble shape and background mode/color.',
+  'Infer font category, weight/style, fill/stroke colors, stroke width, alignment, direction, rotation, bubble shape and background mode/color. For fontFamilyGuess use the closest visual category only: sans, serif, condensed, display, handwritten, mono, or typewriter. Do not return arbitrary font names.',
   'Preserve original visual intent. Black background with white letters must remain black/white; do not normalize every region to one style.',
   'Infer speaker only when supported. Return readingOrder following the source manga reading direction.',
   'SFX must remain a separate visual lettering category. Never redraw artwork or invent text.',
