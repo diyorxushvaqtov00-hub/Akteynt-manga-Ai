@@ -53,7 +53,7 @@ export default async function AdminDashboard() {
           </nav>
           <div className="mb-3 mt-8 px-2 text-[9px] font-bold uppercase tracking-[.2em] text-zinc-600">System</div>
           <nav className="space-y-1">
-            {[[Users,"Users"],[BarChart3,"Analytics"],[HardDrive,"Storage"],[ShieldCheck,"System Health"],[Settings,"Settings"]].map(([Icon,label]) => {const I=Icon as typeof Users; return <a key={label as string} href={label === "Users" ? "/admin/users" : "#"} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-500 hover:bg-white/[.03] hover:text-zinc-200"><I size={17}/><span>{label as string}</span></a>})}
+            {[[Users,"Users"],[BarChart3,"Analytics"],[HardDrive,"Storage"],[ShieldCheck,"System Health"],[Settings,"Settings"]].map(([Icon,label]) => {const I=Icon as typeof Users; return <a key={label as string} href={label === "Users" ? "/admin/users" : label === "Analytics" ? "/admin/analytics" : "#"} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-500 hover:bg-white/[.03] hover:text-zinc-200"><I size={17}/><span>{label as string}</span></a>})}
           </nav>
           <div className="mt-auto rounded-2xl border border-white/[.06] bg-white/[.025] p-3">
             <div className="flex items-center gap-3"><div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-xs font-black">D</div><div className="min-w-0"><div className="truncate text-xs font-semibold">Diyor</div><div className="flex items-center gap-1 text-[10px] text-emerald-400"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"/> Online</div></div><MoreHorizontal size={15} className="ml-auto text-zinc-600"/></div>
