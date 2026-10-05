@@ -1,3 +1,4 @@
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { Activity, BarChart3, BookOpen, CheckCircle2, ChevronDown, Clock3, Database, FileText, LayoutDashboard, Menu, MoreHorizontal, Search, Settings, ShieldCheck, Sparkles, UploadCloud, Users, Zap, AlertTriangle, Cpu, HardDrive } from "lucide-react";
 
 const projects = [
@@ -24,7 +25,18 @@ function Status({ children }: { children: string }) {
   return <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-[.12em] ${map[children] ?? "border-white/10 bg-white/5 text-zinc-400"}`}>{children}</span>;
 }
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const supabase = getSupabaseAdmin();
+  const [mangas, chapters, users, jobs, readyJobs, failedJobs] = await Promise.all([
+    supabase.from("mangas").select("*", { count: "exact", head: true }),
+    supabase.from("chapters").select("*", { count: "exact", head: true }),
+    supabase.from("profiles").select("*", { count: "exact", head: true }),
+    supabase.from("translation_jobs").select("id,filename,progress,stage,status,error,error_message,updated_at,created_at").order("updated_at", { ascending: false }).limit(8),
+    supabase.from("translation_jobs").select("*", { count: "exact", head: true }).eq("stage", "READY"),
+    supabase.from("translation_jobs").select("*", { count: "exact", head: true }).or("error.not.is.null,error_message.not.is.null"),
+  ]);
+  const jobRows = jobs.data ?? [];
+  const kpis = { mangas: mangas.count ?? 0, chapters: chapters.count ?? 0, users: users.count ?? 0, active: jobRows.filter((j:any)=>j.stage !== "READY" && !j.error && !j.error_message).length, ready: readyJobs.count ?? 0, failed: failedJobs.count ?? 0 };
   return (
     <main className="min-h-screen bg-[#08070d] text-zinc-100">
       <div className="flex min-h-screen">
@@ -77,7 +89,7 @@ export default function AdminDashboard() {
                 <section className="overflow-hidden rounded-2xl border border-white/[.07] bg-[#0c0b12]">
                   <div className="flex items-center justify-between border-b border-white/[.06] p-5"><div><h2 className="text-sm font-bold">Recent Projects</h2><p className="mt-1 text-[11px] text-zinc-600">Latest manga localization activity</p></div><button className="flex items-center gap-1 text-[10px] text-zinc-500">View all <ChevronDown size={12}/></button></div>
                   <div className="divide-y divide-white/[.05]">
-                    {projects.map(p=><div key={p.title} className="grid grid-cols-[minmax(180px,1.5fr)_90px_minmax(120px,1fr)_90px_70px] items-center gap-4 px-5 py-4">
+                    {(jobRows.length ? jobRows.map((j:any)=>({title:j.filename||"Untitled job",chapter:`Stage: ${j.stage}`,cover:(j.filename||"AI").slice(0,2).toUpperCase(),progress:j.progress??0,stage:j.stage,updated:new Date(j.updated_at||j.created_at).toLocaleString("uz-UZ"),tone:"violet"})) : projects).map(p=><div key={p.title} className="grid grid-cols-[minmax(180px,1.5fr)_90px_minmax(120px,1fr)_90px_70px] items-center gap-4 px-5 py-4">
                       <div className="flex items-center gap-3"><div className="grid h-11 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-700/60 to-fuchsia-900/60 text-[9px] font-black ring-1 ring-white/10">{p.cover}</div><div className="min-w-0"><div className="truncate text-xs font-semibold">{p.title}</div><div className="mt-1 text-[10px] text-zinc-600">{p.chapter} · JP → UZ</div></div></div>
                       <div className="text-[10px] text-zinc-500">{p.updated}</div>
                       <div><div className="mb-1.5 flex justify-between text-[9px]"><span className="text-zinc-600">Progress</span><span className="text-zinc-400">{p.progress}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500" style={{width:p.progress+"%"}}/></div></div>
